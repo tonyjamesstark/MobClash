@@ -1,4 +1,4 @@
-package com.example.mobclash.managers;
+package io.tjs.mobclash.managers;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -18,7 +18,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class LanguageManagerTest {
 
-  @Mock private JavaPlugin plugin;
+  @Mock(lenient = true)
+  private JavaPlugin plugin;
 
   @TempDir Path tempDir;
 

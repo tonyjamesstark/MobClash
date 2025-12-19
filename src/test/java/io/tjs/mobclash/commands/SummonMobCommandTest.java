@@ -1,12 +1,14 @@
-package com.example.mobclash.commands;
+package io.tjs.mobclash.commands;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import com.example.mobclash.managers.LanguageManager;
-import com.example.mobclash.managers.SpawnManager;
+import io.tjs.mobclash.MobClashPlugin;
+import io.tjs.mobclash.managers.LanguageManager;
+import io.tjs.mobclash.managers.SpawnManager;
 import java.util.List;
 import java.util.Random;
+import java.util.logging.Level;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -27,25 +29,35 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class SummonMobsCommandTest {
 
-  @Mock private org.bukkit.plugin.java.JavaPlugin plugin;
+  @Mock(lenient = true)
+  private MobClashPlugin plugin;
 
-  @Mock private SpawnManager spawnManager;
+  @Mock(lenient = true)
+  private SpawnManager spawnManager;
 
-  @Mock private LanguageManager langManager;
+  @Mock(lenient = true)
+  private LanguageManager langManager;
 
-  @Mock private Player player;
+  @Mock(lenient = true)
+  private Player player;
 
-  @Mock private BlockCommandSender commandBlock;
+  @Mock(lenient = true)
+  private BlockCommandSender commandBlock;
 
-  @Mock private Command command;
+  @Mock(lenient = true)
+  private Command command;
 
-  @Mock private World world;
+  @Mock(lenient = true)
+  private World world;
 
-  @Mock private Block block;
+  @Mock(lenient = true)
+  private Block block;
 
-  @Mock private Chest chest;
+  @Mock(lenient = true)
+  private Chest chest;
 
-  @Mock private Inventory inventory;
+  @Mock(lenient = true)
+  private Inventory inventory;
 
   private SummonMobsCommand summonMobsCommand;
   private Location spawnLoc;
@@ -59,6 +71,9 @@ class SummonMobsCommandTest {
 
     when(langManager.getMessage(anyString(), any())).thenReturn("Message");
     when(spawnManager.getRandom()).thenReturn(new Random(42)); // Predictable random
+
+    // Mock the log method to prevent NPE
+    doNothing().when(plugin).log(any(Level.class), anyString());
   }
 
   @Test

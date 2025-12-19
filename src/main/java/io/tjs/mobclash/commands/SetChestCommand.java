@@ -1,7 +1,7 @@
-package com.example.mobclash.commands;
+package io.tjs.mobclash.commands;
 
-import com.example.mobclash.managers.LanguageManager;
-import com.example.mobclash.managers.SpawnManager;
+import io.tjs.mobclash.managers.LanguageManager;
+import io.tjs.mobclash.managers.SpawnManager;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;

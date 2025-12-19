@@ -1,12 +1,13 @@
-package com.example.mobclash.managers;
+package io.tjs.mobclash.managers;
 
-import com.example.mobclash.MobClashPlugin;
+import io.tjs.mobclash.MobClashPlugin;
 import java.util.*;
 import java.util.logging.Level;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.plugin.java.JavaPlugin;
 
 public class SpawnManager {
 
@@ -15,8 +16,8 @@ public class SpawnManager {
   private final Map<String, Location> groupChests;
   private final Random random;
 
-  public SpawnManager(MobClashPlugin plugin) {
-    this.plugin = plugin;
+  public SpawnManager(JavaPlugin plugin) {
+    this.plugin = (MobClashPlugin) plugin;
     this.spawnGroups = new HashMap<>();
     this.groupChests = new HashMap<>();
     this.random = new Random();

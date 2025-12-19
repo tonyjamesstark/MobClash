@@ -1,14 +1,15 @@
-package com.example.mobclash.managers;
+package io.tjs.mobclash.managers;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import io.tjs.mobclash.MobClashPlugin;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.plugin.java.JavaPlugin;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,11 +19,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class SpawnManagerTest {
 
-  @Mock private JavaPlugin plugin;
+  @Mock(lenient = true)
+  private MobClashPlugin plugin;
 
-  @Mock private FileConfiguration config;
+  @Mock(lenient = true)
+  private FileConfiguration config;
 
-  @Mock private World world;
+  @Mock(lenient = true)
+  private World world;
 
   private SpawnManager spawnManager;
 
@@ -30,6 +34,7 @@ class SpawnManagerTest {
   void setUp() {
     when(plugin.getConfig()).thenReturn(config);
     when(config.contains(anyString())).thenReturn(false);
+    doNothing().when(plugin).log(any(Level.class), anyString());
     spawnManager = new SpawnManager(plugin);
   }
 

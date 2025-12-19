@@ -1,7 +1,7 @@
-package com.example.mobspawner.commands;
+package io.tjs.mobclash.commands;
 
-import com.example.mobspawner.managers.LanguageManager;
-import com.example.mobspawner.managers.SpawnManager;
+import io.tjs.mobclash.managers.LanguageManager;
+import io.tjs.mobclash.managers.SpawnManager;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;

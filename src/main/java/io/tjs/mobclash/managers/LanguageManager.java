@@ -1,4 +1,4 @@
-package com.example.mobclash.managers;
+package io.tjs.mobclash.managers;
 
 import java.io.File;
 import org.bukkit.configuration.file.FileConfiguration;

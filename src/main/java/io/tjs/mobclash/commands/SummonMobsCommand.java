@@ -1,8 +1,8 @@
-package com.example.mobclash.commands;
+package io.tjs.mobclash.commands;
 
-import com.example.mobclash.MobClashPlugin;
-import com.example.mobclash.managers.LanguageManager;
-import com.example.mobclash.managers.SpawnManager;
+import io.tjs.mobclash.MobClashPlugin;
+import io.tjs.mobclash.managers.LanguageManager;
+import io.tjs.mobclash.managers.SpawnManager;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;

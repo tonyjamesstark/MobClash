@@ -1,15 +1,16 @@
-package com.example.mobclash;
+package io.tjs.mobclash;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import com.example.mobclash.managers.LanguageManager;
-import com.example.mobclash.managers.SpawnManager;
+import io.tjs.mobclash.managers.LanguageManager;
+import io.tjs.mobclash.managers.SpawnManager;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.logging.Level;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -18,7 +19,6 @@ import org.bukkit.command.Command;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.plugin.java.JavaPlugin;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,21 +30,29 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class MobClashPluginIT {
 
-  @Mock private JavaPlugin plugin;
+  @Mock(lenient = true)
+  private MobClashPlugin plugin;
 
-  @Mock private FileConfiguration config;
+  @Mock(lenient = true)
+  private FileConfiguration config;
 
-  @Mock private Player player;
+  @Mock(lenient = true)
+  private Player player;
 
-  @Mock private World world;
+  @Mock(lenient = true)
+  private World world;
 
-  @Mock private Command command;
+  @Mock(lenient = true)
+  private Command command;
 
-  @Mock private Block block;
+  @Mock(lenient = true)
+  private Block block;
 
-  @Mock private Chest chest;
+  @Mock(lenient = true)
+  private Chest chest;
 
-  @Mock private Inventory inventory;
+  @Mock(lenient = true)
+  private Inventory inventory;
 
   @TempDir Path tempDir;
 
@@ -58,6 +66,9 @@ class MobClashPluginIT {
     when(plugin.getDataFolder()).thenReturn(dataFolder);
     when(plugin.getConfig()).thenReturn(config);
     when(config.contains(anyString())).thenReturn(false);
+
+    // Mock the log method to prevent NPE
+    doNothing().when(plugin).log(any(Level.class), anyString());
 
     // Create language file
     File langFile = new File(dataFolder, "language.yml");

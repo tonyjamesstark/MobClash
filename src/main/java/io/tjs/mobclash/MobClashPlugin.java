@@ -1,8 +1,8 @@
-package com.example.mobclash;
+package io.tjs.mobclash;
 
-import com.example.mobclash.commands.*;
-import com.example.mobclash.managers.LanguageManager;
-import com.example.mobclash.managers.SpawnManager;
+import io.tjs.mobclash.commands.*;
+import io.tjs.mobclash.managers.LanguageManager;
+import io.tjs.mobclash.managers.SpawnManager;
 import java.util.logging.Level;
 import org.bukkit.plugin.java.JavaPlugin;
 

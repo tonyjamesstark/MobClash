@@ -2,7 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>io.tjs</groupId>
+  <groupId>com.example</groupId>
   <artifactId>mobclash</artifactId>
   <version>1.0.0</version>
   <packaging>jar</packaging>
@@ -175,6 +175,22 @@
             <phase>package</phase>
             <configuration>
               <createDependencyReducedPom>false</createDependencyReducedPom>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <!-- Exclude test classes -->
+                    <exclude>**/*Test.class</exclude>
+                    <exclude>**/*IT.class</exclude>
+                    <!-- Exclude Maven metadata -->
+                    <exclude>META-INF/maven/**</exclude>
+                    <!-- Exclude signature files -->
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
             </configuration>
           </execution>
         </executions>

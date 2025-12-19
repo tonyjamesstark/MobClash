@@ -1,11 +1,13 @@
-package com.example.mobclash.commands;
+package io.tjs.mobclash.commands;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import com.example.mobclash.managers.LanguageManager;
-import com.example.mobclash.managers.SpawnManager;
+import io.tjs.mobclash.MobClashPlugin;
+import io.tjs.mobclash.managers.LanguageManager;
+import io.tjs.mobclash.managers.SpawnManager;
 import java.util.List;
+import java.util.logging.Level;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.BlockCommandSender;
@@ -21,28 +23,49 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class AddSpawnCommandTest {
 
-  @Mock private org.bukkit.plugin.java.JavaPlugin plugin;
+  @Mock(lenient = true)
+  private MobClashPlugin plugin;
 
-  @Mock private SpawnManager spawnManager;
+  @Mock(lenient = true)
+  private SpawnManager spawnManager;
 
-  @Mock private LanguageManager langManager;
+  @Mock(lenient = true)
+  private LanguageManager langManager;
 
-  @Mock private Player player;
+  @Mock(lenient = true)
+  private Player player;
 
-  @Mock private ConsoleCommandSender console;
+  @Mock(lenient = true)
+  private ConsoleCommandSender console;
 
-  @Mock private BlockCommandSender commandBlock;
+  @Mock(lenient = true)
+  private BlockCommandSender commandBlock;
 
-  @Mock private Command command;
+  @Mock(lenient = true)
+  private Command command;
 
-  @Mock private World world;
+  @Mock(lenient = true)
+  private World world;
 
   private AddSpawnCommand addSpawnCommand;
 
   @BeforeEach
   void setUp() {
     addSpawnCommand = new AddSpawnCommand(plugin, spawnManager, langManager);
-    when(langManager.getMessage(anyString(), any())).thenReturn("Message");
+
+    // Properly stub all language manager messages
+    when(langManager.getMessage("no-permission")).thenReturn("§cNo permission!");
+    when(langManager.getMessage("players-only")).thenReturn("§cPlayers only!");
+    when(langManager.getMessage("addspawn-usage")).thenReturn("§cUsage: /addspawn <group>");
+    when(langManager.getMessage(eq("addspawn-success"), anyString(), anyInt()))
+        .thenReturn("§aSpawn added!");
+
+    // Mock the log method to prevent NPE
+    doNothing().when(plugin).log(any(Level.class), anyString());
+
+    // Mock command block and console getName() to prevent NPE
+    when(commandBlock.getName()).thenReturn("CommandBlock");
+    when(console.getName()).thenReturn("Console");
   }
 
   @Test
@@ -84,18 +107,19 @@ class AddSpawnCommandTest {
 
     // Command block can't be a player, so this should fail with "players-only"
     assertTrue(result);
-    verify(commandBlock).sendMessage(anyString());
+    verify(commandBlock).sendMessage("§cPlayers only!");
   }
 
   @Test
   void testConsoleCannotExecute() {
-    when(langManager.getMessage("players-only")).thenReturn("Players only!");
+    // Console needs permission to get past the permission check
+    when(console.hasPermission("mobspawner.addspawn")).thenReturn(true);
 
     boolean result =
         addSpawnCommand.onCommand(console, command, "addspawn", new String[] {"test-group"});
 
     assertTrue(result);
-    verify(console).sendMessage("Players only!");
+    verify(console).sendMessage("§cPlayers only!");
     verify(spawnManager, never()).addSpawnPoint(anyString(), any());
   }
 
