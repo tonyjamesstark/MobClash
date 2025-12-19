@@ -1,0 +1,73 @@
+name: MobClash
+version: 1.0.0
+main: com.example.mobclash.MobClashPlugin
+api-version: 1.20
+author: YourName
+description: Advanced mob spawning system with configurable spawn groups
+
+commands:
+  addspawn:
+    description: Add a spawn point to a group
+    usage: /addspawn <group>
+    permission: mobspawner.addspawn
+  
+  removespawn:
+    description: Remove the nearest spawn point from a group
+    usage: /removespawn <group>
+    permission: mobspawner.removespawn
+  
+  listgroups:
+    description: List all spawn groups
+    usage: /listgroups
+    permission: mobspawner.listgroups
+  
+  showspawns:
+    description: Show spawn points with visual markers
+    usage: /showspawns <group>
+    permission: mobspawner.showspawns
+  
+  setchest:
+    description: Set the spawn egg chest for a group
+    usage: /setchest <group>
+    permission: mobspawner.setchest
+  
+  summonmobs:
+    description: Summon mobs at spawn points
+    usage: /summonmobs <group> <random|all> [amount]
+    permission: mobspawner.summon
+
+permissions:
+  mobspawner.*:
+    description: Grants all MobSpawner permissions
+    default: op
+    children:
+      mobspawner.addspawn: true
+      mobspawner.removespawn: true
+      mobspawner.listgroups: true
+      mobspawner.showspawns: true
+      mobspawner.setchest: true
+      mobspawner.summon: true
+  
+  mobspawner.addspawn:
+    description: Allows adding spawn points
+    default: op
+  
+  mobspawner.removespawn:
+    description: Allows removing spawn points
+    default: op
+  
+  mobspawner.listgroups:
+    description: Allows listing spawn groups
+    default: op
+  
+  mobspawner.showspawns:
+    description: Allows showing spawn points visually
+    default: op
+  
+  mobspawner.setchest:
+    description: Allows setting spawn egg chests
+    default: op
+  
+  mobspawner.summon:
+    description: Allows summoning mobs
+    default: op

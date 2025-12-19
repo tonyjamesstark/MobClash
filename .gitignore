@@ -1,0 +1,7 @@
+.settings
+.classpath
+.factorypath
+.project
+DS_Store
+update_package.sh
+target

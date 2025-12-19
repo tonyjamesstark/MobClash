@@ -1,0 +1,43 @@
+# MobClash Language Configuration
+# Use {0}, {1}, etc. for placeholders
+# Use & for color codes (e.g., &a = green, &c = red, &e = yellow)
+
+# General Messages
+no-permission: "&cYou don't have permission to use this command."
+players-only: "&cOnly players can use this command."
+invalid-number: "&cInvalid number!"
+invalid-amount: "&cAmount must be between 1 and 100."
+
+# Group Messages
+group-not-exist: "&cGroup '{0}' doesn't exist!"
+group-no-points: "&cGroup '{0}' has no spawn points!"
+no-groups: "&cNo spawn groups configured!"
+
+# Add Spawn Command
+addspawn-usage: "&cUsage: /addspawn <group>"
+addspawn-success: "&aAdded spawn point to group '{0}'! Total points: {1}"
+
+# Remove Spawn Command
+removespawn-usage: "&cUsage: /removespawn <group>"
+removespawn-success: "&aRemoved nearest spawn point from group '{0}'!"
+
+# List Groups Command
+listgroups-header: "&a=== Spawn Groups ==="
+listgroups-entry: "&e{0} &7({1} points)"
+
+# Show Spawns Command
+showspawns-usage: "&cUsage: /showspawns <group>"
+showspawns-success: "&aShowing {1} spawn point(s) for group '{0}'!"
+
+# Set Chest Command
+setchest-usage: "&cUsage: /setchest <group>"
+setchest-success: "&aSpawn egg chest set for group '{0}'!"
+must-look-chest: "&cYou must be looking at a chest!"
+
+# Summon Mobs Command
+summonmobs-usage: "&cUsage: /summonmobs <group> <random|all> [amount]"
+summonmobs-success: "&aSpawned {0} mob(s) in group '{1}'!"
+invalid-mode: "&cMode must be 'random' or 'all'!"
+chest-not-set: "&cChest not set for group '{0}'! Use /setchest {0} first."
+chest-missing: "&cThe configured chest no longer exists!"
+no-spawn-eggs: "&cNo spawn eggs found in the chest!"

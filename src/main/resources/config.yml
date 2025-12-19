@@ -1,0 +1,12 @@
+# MobClash Plugin Configuration
+
+# Logging level for plugin operations
+# Options: OFF, SEVERE, WARNING, INFO (default)
+# - INFO: Logs all operations (verbose, recommended for debugging)
+# - WARNING: Only logs warnings and errors
+# - SEVERE: Only logs critical errors
+# - OFF: Disables all plugin logging (not recommended)
+logging-level: INFO
+
+# Note: Spawn groups and chest locations are managed through commands
+# and will be automatically saved below this configuration
