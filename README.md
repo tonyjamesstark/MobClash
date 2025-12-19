@@ -250,3 +250,8 @@ This plugin is provided as-is for use on Minecraft servers.
 ---
 
 **Made with ❤️ for the Minecraft community**
+
+---
+
+Note from the author:
+Vast majority of this was created quickly using Claude. Verification is in progress
