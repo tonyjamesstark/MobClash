@@ -25,7 +25,7 @@ A powerful Minecraft Paper plugin for managing configurable mob spawn groups wit
 ## Installation
 
 ### From Release
-1. Download the latest `mobclash-1.0.0.jar` from releases
+1. Download the latest `mobclash-1.1.0.jar` from releases
 2. Place it in your server's `plugins/` folder
 3. Restart your server
 4. Configuration files will be generated in `plugins/MobClash/`
@@ -253,8 +253,6 @@ Each wave uses the same spawn points but different mob compositions!
 
 ## Updated Checklist 📋
 
-**New package structure:** `com.example.mobclash` (changed from `com.example.mobspawner`)
-
 ### Main Files:
 - `MobClashPlugin.java` (main class)
 - `SpawnManager.java` 
@@ -348,3 +346,9 @@ This plugin is provided as-is for use on Minecraft servers.
 ---
 
 **Made with ❤️ for the Minecraft community**
+
+---
+
+Note from the author: 
+
+the vast majority of this was created as a test case for exploring AI coding workflows. Results may vary. Verification of the project is in progress....
