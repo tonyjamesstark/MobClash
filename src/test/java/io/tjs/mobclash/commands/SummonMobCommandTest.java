@@ -39,6 +39,9 @@ class SummonMobsCommandTest {
   private LanguageManager langManager;
 
   @Mock(lenient = true)
+  private MobTracker mobTracker;
+
+  @Mock(lenient = true)
   private Player player;
 
   @Mock(lenient = true)
@@ -71,6 +74,7 @@ class SummonMobsCommandTest {
 
     when(langManager.getMessage(anyString(), any())).thenReturn("Message");
     when(spawnManager.getRandom()).thenReturn(new Random(42)); // Predictable random
+    when(plugin.getMobTracker()).thenReturn(mobTracker);
 
     // Mock the log method to prevent NPE
     doNothing().when(plugin).log(any(Level.class), anyString());

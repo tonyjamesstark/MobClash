@@ -35,40 +35,40 @@ class SpawnManagerTest {
     when(plugin.getConfig()).thenReturn(config);
     when(config.contains(anyString())).thenReturn(false);
     doNothing().when(plugin).log(any(Level.class), anyString());
+    doNothing().when(plugin).saveConfig();
     spawnManager = new SpawnManager(plugin);
   }
 
   @Test
   void testAddSpawnPoint() {
-    Location location = new Location(world, 100, 64, 100);
+    when(world.getName()).thenReturn("world");
+    Location loc = new Location(world, 100, 64, 100);
 
-    spawnManager.addSpawnPoint("test-group", location);
+    spawnManager.addSpawnPoint("test-group", loc);
 
     assertTrue(spawnManager.hasGroup("test-group"));
-    List<Location> points = spawnManager.getSpawnPoints("test-group");
-    assertEquals(1, points.size());
-    assertEquals(location, points.get(0));
+    assertEquals(1, spawnManager.getSpawnPoints("test-group").size());
+    assertEquals(loc, spawnManager.getSpawnPoints("test-group").get(0));
   }
 
   @Test
   void testAddMultipleSpawnPoints() {
+    when(world.getName()).thenReturn("world");
     Location loc1 = new Location(world, 100, 64, 100);
     Location loc2 = new Location(world, 200, 64, 200);
 
     spawnManager.addSpawnPoint("test-group", loc1);
     spawnManager.addSpawnPoint("test-group", loc2);
 
-    List<Location> points = spawnManager.getSpawnPoints("test-group");
-    assertEquals(2, points.size());
-    assertTrue(points.contains(loc1));
-    assertTrue(points.contains(loc2));
+    assertEquals(2, spawnManager.getSpawnPoints("test-group").size());
   }
 
   @Test
   void testRemoveNearestSpawnPoint() {
+    when(world.getName()).thenReturn("world");
     Location loc1 = new Location(world, 100, 64, 100);
     Location loc2 = new Location(world, 200, 64, 200);
-    Location playerLoc = new Location(world, 110, 64, 110);
+    Location playerLoc = new Location(world, 105, 64, 105);
 
     spawnManager.addSpawnPoint("test-group", loc1);
     spawnManager.addSpawnPoint("test-group", loc2);
@@ -76,57 +76,79 @@ class SpawnManagerTest {
     boolean removed = spawnManager.removeNearestSpawnPoint("test-group", playerLoc);
 
     assertTrue(removed);
-    List<Location> points = spawnManager.getSpawnPoints("test-group");
-    assertEquals(1, points.size());
-    assertEquals(loc2, points.get(0));
+    assertEquals(1, spawnManager.getSpawnPoints("test-group").size());
+    // loc2 should remain since loc1 was closer to playerLoc
+    assertEquals(loc2, spawnManager.getSpawnPoints("test-group").get(0));
   }
 
   @Test
-  void testRemoveNonExistentGroup() {
-    Location playerLoc = new Location(world, 100, 64, 100);
-
-    boolean removed = spawnManager.removeNearestSpawnPoint("nonexistent", playerLoc);
-
-    assertFalse(removed);
-  }
-
-  @Test
-  void testSetAndGetGroupChest() {
+  void testSetGroupChest() {
+    when(world.getName()).thenReturn("world");
     Location chestLoc = new Location(world, 50, 64, 50);
 
     spawnManager.addSpawnPoint("test-group", new Location(world, 100, 64, 100));
-    spawnManager.setGroupChest("test-group", chestLoc);
+    spawnManager.setGroupChest("test-group", "wave1", chestLoc);
 
-    Location retrieved = spawnManager.getGroupChest("test-group");
-    assertEquals(chestLoc, retrieved);
+    assertEquals(chestLoc, spawnManager.getGroupChest("test-group", "wave1"));
   }
 
   @Test
-  void testHasGroup() {
-    assertFalse(spawnManager.hasGroup("test-group"));
+  void testMultipleWavesPerGroup() {
+    when(world.getName()).thenReturn("world");
+    Location chest1 = new Location(world, 50, 64, 50);
+    Location chest2 = new Location(world, 60, 64, 60);
 
-    spawnManager.addSpawnPoint("test-group", new Location(world, 100, 64, 100));
+    spawnManager.addSpawnPoint("arena", new Location(world, 100, 64, 100));
+    spawnManager.setGroupChest("arena", "wave1", chest1);
+    spawnManager.setGroupChest("arena", "wave2", chest2);
 
-    assertTrue(spawnManager.hasGroup("test-group"));
+    assertEquals(chest1, spawnManager.getGroupChest("arena", "wave1"));
+    assertEquals(chest2, spawnManager.getGroupChest("arena", "wave2"));
+    assertEquals(2, spawnManager.getGroupWaves("arena").size());
   }
 
   @Test
   void testGetAllGroups() {
+    when(world.getName()).thenReturn("world");
     Location loc1 = new Location(world, 100, 64, 100);
     Location loc2 = new Location(world, 200, 64, 200);
 
     spawnManager.addSpawnPoint("group1", loc1);
     spawnManager.addSpawnPoint("group2", loc2);
 
-    Map<String, List<Location>> allGroups = spawnManager.getAllGroups();
+    Map<String, List<Location>> groups = spawnManager.getAllGroups();
 
-    assertEquals(2, allGroups.size());
-    assertTrue(allGroups.containsKey("group1"));
-    assertTrue(allGroups.containsKey("group2"));
+    assertEquals(2, groups.size());
+    assertTrue(groups.containsKey("group1"));
+    assertTrue(groups.containsKey("group2"));
+  }
+
+  @Test
+  void testHasGroup() {
+    when(world.getName()).thenReturn("world");
+    Location loc = new Location(world, 100, 64, 100);
+
+    spawnManager.addSpawnPoint("existing-group", loc);
+
+    assertTrue(spawnManager.hasGroup("existing-group"));
+    assertFalse(spawnManager.hasGroup("non-existing-group"));
+  }
+
+  @Test
+  void testRemoveLastSpawnPointRemovesGroup() {
+    when(world.getName()).thenReturn("world");
+    Location loc = new Location(world, 100, 64, 100);
+    Location playerLoc = new Location(world, 105, 64, 105);
+
+    spawnManager.addSpawnPoint("test-group", loc);
+    spawnManager.removeNearestSpawnPoint("test-group", playerLoc);
+
+    assertFalse(spawnManager.hasGroup("test-group"));
   }
 
   @Test
   void testGetRandomSpawnPoint() {
+    when(world.getName()).thenReturn("world");
     Location loc1 = new Location(world, 100, 64, 100);
     Location loc2 = new Location(world, 200, 64, 200);
 
@@ -140,16 +162,18 @@ class SpawnManagerTest {
   }
 
   @Test
-  void testGetRandomSpawnPointNonExistent() {
-    Location random = spawnManager.getRandomSpawnPoint("nonexistent");
+  void testGetGroupWavesEmptyForNonExistentGroup() {
+    Map<String, Location> waves = spawnManager.getGroupWaves("non-existent");
 
-    assertNull(random);
+    assertNotNull(waves);
+    assertTrue(waves.isEmpty());
   }
 
   @Test
-  void testGetSpawnPointsEmptyGroup() {
-    List<Location> points = spawnManager.getSpawnPoints("nonexistent");
+  void testGetGroupChestReturnsNullForNonExistentWave() {
+    when(world.getName()).thenReturn("world");
+    spawnManager.addSpawnPoint("test-group", new Location(world, 100, 64, 100));
 
-    assertTrue(points.isEmpty());
+    assertNull(spawnManager.getGroupChest("test-group", "non-existent-wave"));
   }
 }

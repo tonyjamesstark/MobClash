@@ -2,6 +2,7 @@ package io.tjs.mobclash.commands;
 
 import io.tjs.mobclash.MobClashPlugin;
 import io.tjs.mobclash.managers.LanguageManager;
+import io.tjs.mobclash.managers.MobTracker;
 import io.tjs.mobclash.managers.SpawnManager;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,13 +25,14 @@ public class SummonMobsCommand extends BaseCommand {
 
   @Override
   protected boolean execute(CommandSender sender, String[] args) {
-    if (args.length < 2) {
+    if (args.length < 3) {
       sender.sendMessage(langManager.getMessage("summonmobs-usage"));
       return true;
     }
 
     String groupName = args[0];
-    String mode = args[1].toLowerCase();
+    String waveName = args[1];
+    String mode = args[2].toLowerCase();
 
     if (!mode.equals("random") && !mode.equals("all")) {
       sender.sendMessage(langManager.getMessage("invalid-mode"));
@@ -42,9 +44,9 @@ public class SummonMobsCommand extends BaseCommand {
       return true;
     }
 
-    Location chestLocation = spawnManager.getGroupChest(groupName);
+    Location chestLocation = spawnManager.getGroupChest(groupName, waveName);
     if (chestLocation == null) {
-      sender.sendMessage(langManager.getMessage("chest-not-set", groupName));
+      sender.sendMessage(langManager.getMessage("wave-not-set", groupName, waveName));
       return true;
     }
 
@@ -80,6 +82,8 @@ public class SummonMobsCommand extends BaseCommand {
                 + amount
                 + " mob(s) for group '"
                 + groupName
+                + "' wave '"
+                + waveName
                 + "' in mode '"
                 + mode
                 + "' by "
@@ -87,24 +91,30 @@ public class SummonMobsCommand extends BaseCommand {
     ((MobClashPlugin) plugin)
         .log(Level.INFO, "Available mob types: " + getUniqueMobTypes(spawnEggs));
 
-    int spawned = summonMobs(mode, locations, spawnEggs, amount);
+    int spawned = summonMobs(mode, locations, spawnEggs, amount, groupName, waveName);
 
     ((MobClashPlugin) plugin)
         .log(
             Level.INFO,
-            "Successfully spawned " + spawned + " mob(s) for group '" + groupName + "'");
+            "Successfully spawned "
+                + spawned
+                + " mob(s) for group '"
+                + groupName
+                + "' wave '"
+                + waveName
+                + "'");
 
-    sender.sendMessage(langManager.getMessage("summonmobs-success", spawned, groupName));
+    sender.sendMessage(langManager.getMessage("summonmobs-success", spawned, groupName, waveName));
     return true;
   }
 
   private int parseAmount(CommandSender sender, String[] args) {
-    if (args.length <= 2) {
+    if (args.length <= 3) {
       return 1;
     }
 
     try {
-      int amount = Integer.parseInt(args[2]);
+      int amount = Integer.parseInt(args[3]);
       if (amount < 1 || amount > 100) {
         sender.sendMessage(langManager.getMessage("invalid-amount"));
         return -1;
@@ -145,8 +155,14 @@ public class SummonMobsCommand extends BaseCommand {
   }
 
   private int summonMobs(
-      String mode, List<Location> locations, List<EntityType> spawnEggs, int amount) {
+      String mode,
+      List<Location> locations,
+      List<EntityType> spawnEggs,
+      int amount,
+      String groupName,
+      String waveName) {
     int spawned = 0;
+    MobTracker mobTracker = ((MobClashPlugin) plugin).getMobTracker();
 
     if (mode.equals("random")) {
       Location spawnLoc = locations.get(spawnManager.getRandom().nextInt(locations.size()));
@@ -159,7 +175,12 @@ public class SummonMobsCommand extends BaseCommand {
 
       for (int i = 0; i < amount; i++) {
         EntityType entityType = spawnEggs.get(spawnManager.getRandom().nextInt(spawnEggs.size()));
-        spawnLoc.getWorld().spawnEntity(spawnLoc, entityType);
+        org.bukkit.entity.Entity entity = spawnLoc.getWorld().spawnEntity(spawnLoc, entityType);
+
+        // Tag the mob
+        if (entity instanceof org.bukkit.entity.LivingEntity) {
+          mobTracker.tagMob((org.bukkit.entity.LivingEntity) entity, groupName, waveName);
+        }
         spawned++;
       }
     } else {
@@ -169,7 +190,12 @@ public class SummonMobsCommand extends BaseCommand {
       for (Location spawnLoc : locations) {
         for (int i = 0; i < amount; i++) {
           EntityType entityType = spawnEggs.get(spawnManager.getRandom().nextInt(spawnEggs.size()));
-          spawnLoc.getWorld().spawnEntity(spawnLoc, entityType);
+          org.bukkit.entity.Entity entity = spawnLoc.getWorld().spawnEntity(spawnLoc, entityType);
+
+          // Tag the mob
+          if (entity instanceof org.bukkit.entity.LivingEntity) {
+            mobTracker.tagMob((org.bukkit.entity.LivingEntity) entity, groupName, waveName);
+          }
           spawned++;
         }
       }

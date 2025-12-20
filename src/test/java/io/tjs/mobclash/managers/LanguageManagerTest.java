@@ -28,63 +28,48 @@ class LanguageManagerTest {
   @BeforeEach
   void setUp() throws IOException {
     File dataFolder = tempDir.toFile();
-    File langFile = new File(dataFolder, "language.yml");
-
     when(plugin.getDataFolder()).thenReturn(dataFolder);
-    doAnswer(
-            invocation -> {
-              String resource = invocation.getArgument(0);
-              boolean replace = invocation.getArgument(1);
-              if (!replace && langFile.exists()) {
-                return null;
-              }
-              // Create a simple test language file
-              try (FileWriter writer = new FileWriter(langFile)) {
-                writer.write("test-message: \"&aTest message: {0}\"\n");
-                writer.write("no-permission: \"&cNo permission!\"\n");
-                writer.write("multiple-placeholders: \"&ePlayer {0} at {1}, {2}, {3}\"\n");
-              }
-              return null;
-            })
-        .when(plugin)
-        .saveResource(anyString(), anyBoolean());
+
+    // Create a test language.yml file
+    File langFile = new File(dataFolder, "language.yml");
+    try (FileWriter writer = new FileWriter(langFile)) {
+      writer.write("test-message: \"&aTest message\"\n");
+      writer.write("test-with-placeholder: \"Hello {0}!\"\n");
+      writer.write("test-multiple-placeholders: \"{0} has {1} kills\"\n");
+    }
 
     languageManager = new LanguageManager(plugin);
   }
 
   @Test
   void testGetMessageSimple() {
-    String message = languageManager.getMessage("no-permission");
-
-    assertEquals("§cNo permission!", message);
+    String message = languageManager.getMessage("test-message");
+    assertEquals("§aTest message", message);
   }
 
   @Test
-  void testGetMessageWithSingleReplacement() {
-    String message = languageManager.getMessage("test-message", "World");
-
-    assertEquals("§aTest message: World", message);
+  void testGetMessageWithPlaceholder() {
+    String message = languageManager.getMessage("test-with-placeholder", "World");
+    assertEquals("Hello World!", message);
   }
 
   @Test
-  void testGetMessageWithMultipleReplacements() {
-    String message = languageManager.getMessage("multiple-placeholders", "Steve", 100, 64, 200);
-
-    assertEquals("§ePlayer Steve at 100, 64, 200", message);
+  void testGetMessageWithMultiplePlaceholders() {
+    String message = languageManager.getMessage("test-multiple-placeholders", "Player", 42);
+    assertEquals("Player has 42 kills", message);
   }
 
   @Test
   void testGetMessageMissingKey() {
-    String message = languageManager.getMessage("nonexistent-key");
-
+    String message = languageManager.getMessage("non-existent-key");
     assertTrue(message.contains("Missing translation"));
-    assertTrue(message.contains("nonexistent-key"));
+    assertTrue(message.contains("non-existent-key"));
   }
 
   @Test
-  void testColorCodeReplacement() {
-    String message = languageManager.getMessage("test-message", "test");
-
+  void testColorCodeConversion() {
+    String message = languageManager.getMessage("test-message");
+    // & should be converted to §
     assertTrue(message.startsWith("§a"));
     assertFalse(message.contains("&a"));
   }

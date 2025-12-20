@@ -25,19 +25,33 @@ removespawn-success: "&aRemoved nearest spawn point from group '{0}'!"
 listgroups-header: "&a=== Spawn Groups ==="
 listgroups-entry: "&e{0} &7({1} points)"
 
+# List Spawns Command
+listspawns-usage: "&cUsage: /listspawns <group>"
+listspawns-header: "&a=== Spawn Points for '{0}' ({1} total) ==="
+listspawns-entry: "&e#{0} &7{1} &f(&a{2}&f, &a{3}&f, &a{4}&f)"
+
 # Show Spawns Command
 showspawns-usage: "&cUsage: /showspawns <group>"
 showspawns-success: "&aShowing {1} spawn point(s) for group '{0}'!"
 
 # Set Chest Command
-setchest-usage: "&cUsage: /setchest <group>"
-setchest-success: "&aSpawn egg chest set for group '{0}'!"
+setchest-usage: "&cUsage: /setchest <group> <wave>"
+setchest-success: "&aSpawn egg chest '{1}' set for group '{0}'!"
 must-look-chest: "&cYou must be looking at a chest!"
 
 # Summon Mobs Command
-summonmobs-usage: "&cUsage: /summonmobs <group> <random|all> [amount]"
-summonmobs-success: "&aSpawned {0} mob(s) in group '{1}'!"
+summonmobs-usage: "&cUsage: /summonmobs <group> <wave> <random|all> [amount]"
+summonmobs-success: "&aSpawned {0} mob(s) in group '{1}' wave '{2}'!"
 invalid-mode: "&cMode must be 'random' or 'all'!"
-chest-not-set: "&cChest not set for group '{0}'! Use /setchest {0} first."
+wave-not-set: "&cWave '{1}' not set for group '{0}'! Use /setchest {0} {1} first."
 chest-missing: "&cThe configured chest no longer exists!"
 no-spawn-eggs: "&cNo spawn eggs found in the chest!"
+
+# Kills Command
+kills-usage: "&cUsage: /kills [top|reset|resetall] [amount]"
+kills-personal: "&aYou have killed &e{0}&a MobClash mobs!"
+kills-none: "&cNo kills recorded yet!"
+kills-top-header: "&a=== Top {0} MobClash Killers ==="
+kills-top-entry: "&e#{0} &7{1} &f- &a{2} kills"
+kills-reset: "&aYour kills have been reset! (was {0})"
+kills-resetall: "&aAll player kills have been reset!"

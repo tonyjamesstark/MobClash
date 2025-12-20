@@ -1,7 +1,9 @@
 package io.tjs.mobclash;
 
 import io.tjs.mobclash.commands.*;
+import io.tjs.mobclash.listeners.MobDeathListener;
 import io.tjs.mobclash.managers.LanguageManager;
+import io.tjs.mobclash.managers.MobTracker;
 import io.tjs.mobclash.managers.SpawnManager;
 import java.util.logging.Level;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -10,6 +12,7 @@ public class MobClashPlugin extends JavaPlugin {
 
   private SpawnManager spawnManager;
   private LanguageManager languageManager;
+  private MobTracker mobTracker;
   private Level loggingLevel;
 
   @Override
@@ -25,8 +28,14 @@ public class MobClashPlugin extends JavaPlugin {
     spawnManager = new SpawnManager(this);
     log(Level.INFO, "Spawn manager loaded with " + spawnManager.getAllGroups().size() + " groups");
 
+    mobTracker = new MobTracker(this);
+    log(Level.INFO, "Mob tracker initialized");
+
     registerCommands();
     log(Level.INFO, "Commands registered");
+
+    registerListeners();
+    log(Level.INFO, "Event listeners registered");
 
     getLogger().info("MobClash plugin enabled successfully!");
   }
@@ -37,7 +46,12 @@ public class MobClashPlugin extends JavaPlugin {
 
     if (spawnManager != null) {
       spawnManager.saveConfigData();
-      log(Level.INFO, "Configuration saved");
+      log(Level.INFO, "Spawn configuration saved");
+    }
+
+    if (mobTracker != null) {
+      mobTracker.saveKillData();
+      log(Level.INFO, "Kill tracking data saved");
     }
 
     getLogger().info("MobClash plugin disabled!");
@@ -66,6 +80,10 @@ public class MobClashPlugin extends JavaPlugin {
     getCommand("listgroups")
         .setExecutor(new ListGroupsCommand(this, spawnManager, languageManager));
 
+    log(Level.INFO, "Registering command: listspawns");
+    getCommand("listspawns")
+        .setExecutor(new ListSpawnsCommand(this, spawnManager, languageManager));
+
     log(Level.INFO, "Registering command: showspawns");
     getCommand("showspawns")
         .setExecutor(new ShowSpawnsCommand(this, spawnManager, languageManager));
@@ -76,6 +94,14 @@ public class MobClashPlugin extends JavaPlugin {
     log(Level.INFO, "Registering command: summonmobs");
     getCommand("summonmobs")
         .setExecutor(new SummonMobsCommand(this, spawnManager, languageManager));
+
+    log(Level.INFO, "Registering command: kills");
+    getCommand("kills")
+        .setExecutor(new KillsCommand(this, spawnManager, languageManager, mobTracker));
+  }
+
+  private void registerListeners() {
+    getServer().getPluginManager().registerEvents(new MobDeathListener(this, mobTracker), this);
   }
 
   public SpawnManager getSpawnManager() {
@@ -84,6 +110,10 @@ public class MobClashPlugin extends JavaPlugin {
 
   public LanguageManager getLanguageManager() {
     return languageManager;
+  }
+
+  public MobTracker getMobTracker() {
+    return mobTracker;
   }
 
   /** Log a message at the specified level if it meets the configured logging threshold */

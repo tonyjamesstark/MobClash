@@ -7,17 +7,17 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.plugin.java.JavaPlugin;
 
 public class SpawnManager {
 
   private final MobClashPlugin plugin;
   private final Map<String, List<Location>> spawnGroups;
-  private final Map<String, Location> groupChests;
+  private final Map<String, Map<String, Location>>
+      groupChests; // group -> (wave name -> chest location)
   private final Random random;
 
-  public SpawnManager(JavaPlugin plugin) {
-    this.plugin = (MobClashPlugin) plugin;
+  public SpawnManager(MobClashPlugin plugin) {
+    this.plugin = plugin;
     this.spawnGroups = new HashMap<>();
     this.groupChests = new HashMap<>();
     this.random = new Random();
@@ -62,21 +62,32 @@ public class SpawnManager {
       ConfigurationSection chestsSection = config.getConfigurationSection("group-chests");
       if (chestsSection != null) {
         for (String groupName : chestsSection.getKeys(false)) {
-          ConfigurationSection chestSection = chestsSection.getConfigurationSection(groupName);
-          if (chestSection != null) {
-            Location loc =
-                new Location(
-                    Bukkit.getWorld(chestSection.getString("world")),
-                    chestSection.getDouble("x"),
-                    chestSection.getDouble("y"),
-                    chestSection.getDouble("z"));
-            groupChests.put(groupName, loc);
-            plugin.log(
-                Level.INFO,
-                "Loaded chest for group '"
-                    + groupName
-                    + "' at "
-                    + String.format("(%.1f, %.1f, %.1f)", loc.getX(), loc.getY(), loc.getZ()));
+          ConfigurationSection groupChestsSection =
+              chestsSection.getConfigurationSection(groupName);
+          if (groupChestsSection != null) {
+            Map<String, Location> waves = new HashMap<>();
+            for (String waveName : groupChestsSection.getKeys(false)) {
+              ConfigurationSection chestSection =
+                  groupChestsSection.getConfigurationSection(waveName);
+              if (chestSection != null) {
+                Location loc =
+                    new Location(
+                        Bukkit.getWorld(chestSection.getString("world")),
+                        chestSection.getDouble("x"),
+                        chestSection.getDouble("y"),
+                        chestSection.getDouble("z"));
+                waves.put(waveName, loc);
+                plugin.log(
+                    Level.INFO,
+                    "Loaded chest '"
+                        + waveName
+                        + "' for group '"
+                        + groupName
+                        + "' at "
+                        + String.format("(%.1f, %.1f, %.1f)", loc.getX(), loc.getY(), loc.getZ()));
+              }
+            }
+            groupChests.put(groupName, waves);
           }
         }
       }
@@ -87,8 +98,8 @@ public class SpawnManager {
         "Configuration loaded: "
             + spawnGroups.size()
             + " groups, "
-            + groupChests.size()
-            + " chests");
+            + groupChests.values().stream().mapToInt(Map::size).sum()
+            + " wave chests");
   }
 
   public void saveConfigData() {
@@ -115,15 +126,20 @@ public class SpawnManager {
 
     // Save group chests
     config.set("group-chests", null);
-    for (Map.Entry<String, Location> entry : groupChests.entrySet()) {
-      String groupName = entry.getKey();
-      Location loc = entry.getValue();
-      String path = "group-chests." + groupName;
-      config.set(path + ".world", loc.getWorld().getName());
-      config.set(path + ".x", loc.getX());
-      config.set(path + ".y", loc.getY());
-      config.set(path + ".z", loc.getZ());
-      plugin.log(Level.INFO, "Saved chest for group '" + groupName + "'");
+    for (Map.Entry<String, Map<String, Location>> groupEntry : groupChests.entrySet()) {
+      String groupName = groupEntry.getKey();
+      Map<String, Location> waves = groupEntry.getValue();
+
+      for (Map.Entry<String, Location> waveEntry : waves.entrySet()) {
+        String waveName = waveEntry.getKey();
+        Location loc = waveEntry.getValue();
+        String path = "group-chests." + groupName + "." + waveName;
+        config.set(path + ".world", loc.getWorld().getName());
+        config.set(path + ".x", loc.getX());
+        config.set(path + ".y", loc.getY());
+        config.set(path + ".z", loc.getZ());
+        plugin.log(Level.INFO, "Saved chest '" + waveName + "' for group '" + groupName + "'");
+      }
     }
 
     plugin.saveConfig();
@@ -185,11 +201,14 @@ public class SpawnManager {
     return true;
   }
 
-  public void setGroupChest(String groupName, Location chestLocation) {
-    groupChests.put(groupName, chestLocation);
+  public void setGroupChest(String groupName, String waveName, Location chestLocation) {
+    groupChests.putIfAbsent(groupName, new HashMap<>());
+    groupChests.get(groupName).put(waveName, chestLocation);
     plugin.log(
         Level.INFO,
-        "Set chest for group '"
+        "Set chest '"
+            + waveName
+            + "' for group '"
             + groupName
             + "' at "
             + String.format(
@@ -209,8 +228,16 @@ public class SpawnManager {
     return spawnGroups.getOrDefault(groupName, new ArrayList<>());
   }
 
-  public Location getGroupChest(String groupName) {
-    return groupChests.get(groupName);
+  public Location getGroupChest(String groupName, String waveName) {
+    Map<String, Location> waves = groupChests.get(groupName);
+    if (waves == null) {
+      return null;
+    }
+    return waves.get(waveName);
+  }
+
+  public Map<String, Location> getGroupWaves(String groupName) {
+    return groupChests.getOrDefault(groupName, new HashMap<>());
   }
 
   public Map<String, List<Location>> getAllGroups() {

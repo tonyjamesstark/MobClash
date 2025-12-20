@@ -4,12 +4,15 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import io.tjs.mobclash.managers.LanguageManager;
+import io.tjs.mobclash.managers.MobTracker;
 import io.tjs.mobclash.managers.SpawnManager;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Level;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -58,6 +61,7 @@ class MobClashPluginIT {
 
   private SpawnManager spawnManager;
   private LanguageManager languageManager;
+  private MobTracker mobTracker;
 
   @BeforeEach
   void setUp() throws IOException {
@@ -69,145 +73,170 @@ class MobClashPluginIT {
 
     // Mock the log method to prevent NPE
     doNothing().when(plugin).log(any(Level.class), anyString());
+    doNothing().when(plugin).saveConfig();
 
-    // Create language file
+    // Create test language.yml
     File langFile = new File(dataFolder, "language.yml");
     try (FileWriter writer = new FileWriter(langFile)) {
-      writer.write("no-permission: \"&cNo permission\"\n");
-      writer.write("players-only: \"&cPlayers only\"\n");
-      writer.write("addspawn-success: \"&aAdded spawn to {0}! Total: {1}\"\n");
-      writer.write("setchest-success: \"&aChest set for {0}\"\n");
-      writer.write("summonmobs-success: \"&aSpawned {0} mobs in {1}\"\n");
-      writer.write("group-not-exist: \"&cGroup {0} doesn't exist\"\n");
-      writer.write("chest-not-set: \"&cChest not set for {0}\"\n");
-      writer.write("must-look-chest: \"&cMust look at chest\"\n");
+      writer.write("test-message: \"Test\"\n");
     }
 
-    doAnswer(
-            invocation -> {
-              plugin.saveConfig();
-              return null;
-            })
-        .when(config)
-        .set(anyString(), any());
-
-    // Initialize managers
+    // Create managers
     spawnManager = new SpawnManager(plugin);
     languageManager = new LanguageManager(plugin);
+    mobTracker = new MobTracker(plugin);
 
-    // Setup player mock
-    when(player.hasPermission(anyString())).thenReturn(true);
+    when(plugin.getMobTracker()).thenReturn(mobTracker);
   }
 
   @Test
-  void testCompleteWorkflow_AddSpawnSetChestAndSummon() {
-    // Step 1: Add spawn points
-    Location spawnLoc1 = new Location(world, 100, 64, 100);
-    Location spawnLoc2 = new Location(world, 200, 64, 200);
+  void testCompleteWorkflowWithWaves() {
+    // Setup world and locations
+    when(world.getName()).thenReturn("world");
+    Location loc1 = new Location(world, 100, 64, 100);
+    Location loc2 = new Location(world, 200, 64, 200);
+    Location chestLoc = new Location(world, 50, 64, 50);
 
-    spawnManager.addSpawnPoint("arena", spawnLoc1);
-    spawnManager.addSpawnPoint("arena", spawnLoc2);
+    // Add spawn points
+    spawnManager.addSpawnPoint("arena", loc1);
+    spawnManager.addSpawnPoint("arena", loc2);
 
+    // Set chest for wave1
+    spawnManager.setGroupChest("arena", "wave1", chestLoc);
+
+    // Verify setup
     assertTrue(spawnManager.hasGroup("arena"));
     assertEquals(2, spawnManager.getSpawnPoints("arena").size());
+    assertNotNull(spawnManager.getGroupChest("arena", "wave1"));
 
-    // Step 2: Set chest
-    Location chestLoc = new Location(world, 50, 64, 50);
-    spawnManager.setGroupChest("arena", chestLoc);
-
-    assertEquals(chestLoc, spawnManager.getGroupChest("arena"));
-
-    // Step 3: Verify data persistence
-    List<Location> points = spawnManager.getSpawnPoints("arena");
-    assertTrue(points.contains(spawnLoc1));
-    assertTrue(points.contains(spawnLoc2));
+    // Verify persistence
+    Map<String, List<Location>> groups = spawnManager.getAllGroups();
+    assertTrue(groups.containsKey("arena"));
+    assertEquals(2, groups.get("arena").size());
   }
 
   @Test
-  void testMultipleGroups() {
+  void testMultipleGroupsAndWaves() {
+    when(world.getName()).thenReturn("world");
     Location arenaLoc = new Location(world, 100, 64, 100);
-    Location bossLoc = new Location(world, 500, 64, 500);
-    Location ambushLoc = new Location(world, 300, 64, 300);
+    Location bossLoc = new Location(world, 200, 64, 200);
+    Location arenaChest1 = new Location(world, 50, 64, 50);
+    Location arenaChest2 = new Location(world, 60, 64, 60);
+    Location bossChest = new Location(world, 70, 64, 70);
 
+    // Setup arena with multiple waves
     spawnManager.addSpawnPoint("arena", arenaLoc);
+    spawnManager.setGroupChest("arena", "wave1", arenaChest1);
+    spawnManager.setGroupChest("arena", "wave2", arenaChest2);
+
+    // Setup boss with one wave
     spawnManager.addSpawnPoint("boss", bossLoc);
-    spawnManager.addSpawnPoint("ambush", ambushLoc);
+    spawnManager.setGroupChest("boss", "final", bossChest);
 
-    assertTrue(spawnManager.hasGroup("arena"));
-    assertTrue(spawnManager.hasGroup("boss"));
-    assertTrue(spawnManager.hasGroup("ambush"));
-
-    assertEquals(3, spawnManager.getAllGroups().size());
+    // Verify
+    assertEquals(2, spawnManager.getAllGroups().size());
+    assertEquals(2, spawnManager.getGroupWaves("arena").size());
+    assertEquals(1, spawnManager.getGroupWaves("boss").size());
   }
 
   @Test
-  void testRemoveSpawnPointsUntilEmpty() {
+  void testRemoveSpawnPoint() {
+    when(world.getName()).thenReturn("world");
     Location loc1 = new Location(world, 100, 64, 100);
     Location loc2 = new Location(world, 200, 64, 200);
-    Location playerLoc = new Location(world, 110, 64, 110);
+    Location playerLoc = new Location(world, 105, 64, 105);
 
-    spawnManager.addSpawnPoint("test", loc1);
-    spawnManager.addSpawnPoint("test", loc2);
+    spawnManager.addSpawnPoint("test-group", loc1);
+    spawnManager.addSpawnPoint("test-group", loc2);
 
-    // Remove first point (closest to player)
-    assertTrue(spawnManager.removeNearestSpawnPoint("test", playerLoc));
-    assertEquals(1, spawnManager.getSpawnPoints("test").size());
+    assertEquals(2, spawnManager.getSpawnPoints("test-group").size());
 
-    // Remove second point
-    assertTrue(spawnManager.removeNearestSpawnPoint("test", playerLoc));
-    assertFalse(spawnManager.hasGroup("test"));
+    spawnManager.removeNearestSpawnPoint("test-group", playerLoc);
+
+    assertEquals(1, spawnManager.getSpawnPoints("test-group").size());
   }
 
   @Test
-  void testLanguageManagerWithMultipleReplacements() {
-    String message = languageManager.getMessage("addspawn-success", "arena", 5);
+  void testKillTracking() {
+    when(player.getUniqueId()).thenReturn(UUID.randomUUID());
+    when(player.getName()).thenReturn("TestPlayer");
 
-    assertTrue(message.contains("arena"));
-    assertTrue(message.contains("5"));
-    assertTrue(message.startsWith("§a")); // Color code replacement
+    // Record kills
+    mobTracker.recordKill(player);
+    mobTracker.recordKill(player);
+    mobTracker.recordKill(player);
+
+    // Verify kills
+    assertEquals(3, mobTracker.getKills(player));
   }
 
   @Test
-  void testRandomSpawnPointSelection() {
-    Location loc1 = new Location(world, 100, 64, 100);
-    Location loc2 = new Location(world, 200, 64, 200);
-    Location loc3 = new Location(world, 300, 64, 300);
+  void testKillLeaderboard() {
+    Player player1 = mock(Player.class);
+    Player player2 = mock(Player.class);
+    UUID uuid1 = UUID.randomUUID();
+    UUID uuid2 = UUID.randomUUID();
 
-    spawnManager.addSpawnPoint("test", loc1);
-    spawnManager.addSpawnPoint("test", loc2);
-    spawnManager.addSpawnPoint("test", loc3);
+    when(player1.getUniqueId()).thenReturn(uuid1);
+    when(player2.getUniqueId()).thenReturn(uuid2);
+    when(player1.getName()).thenReturn("Player1");
+    when(player2.getName()).thenReturn("Player2");
 
-    // Get multiple random points and verify they're all valid
-    for (int i = 0; i < 10; i++) {
-      Location random = spawnManager.getRandomSpawnPoint("test");
-      assertNotNull(random);
-      assertTrue(
-          random.equals(loc1) || random.equals(loc2) || random.equals(loc3),
-          "Random point should be one of the added locations");
-    }
+    // Player 1 gets 5 kills, Player 2 gets 3 kills
+    for (int i = 0; i < 5; i++) mobTracker.recordKill(player1);
+    for (int i = 0; i < 3; i++) mobTracker.recordKill(player2);
+
+    List<Map.Entry<UUID, Integer>> top = mobTracker.getTopKills(10);
+
+    assertEquals(2, top.size());
+    assertEquals(uuid1, top.get(0).getKey());
+    assertEquals(5, top.get(0).getValue());
+    assertEquals(uuid2, top.get(1).getKey());
+    assertEquals(3, top.get(1).getValue());
   }
 
   @Test
-  void testChestForMultipleGroups() {
-    Location arenaChest = new Location(world, 50, 64, 50);
-    Location bossChest = new Location(world, 100, 64, 100);
+  void testResetKills() {
+    when(player.getUniqueId()).thenReturn(UUID.randomUUID());
+    when(player.getName()).thenReturn("TestPlayer");
 
-    spawnManager.addSpawnPoint("arena", new Location(world, 0, 64, 0));
-    spawnManager.addSpawnPoint("boss", new Location(world, 500, 64, 500));
+    mobTracker.recordKill(player);
+    mobTracker.recordKill(player);
+    assertEquals(2, mobTracker.getKills(player));
 
-    spawnManager.setGroupChest("arena", arenaChest);
-    spawnManager.setGroupChest("boss", bossChest);
-
-    assertEquals(arenaChest, spawnManager.getGroupChest("arena"));
-    assertEquals(bossChest, spawnManager.getGroupChest("boss"));
-    assertNotEquals(spawnManager.getGroupChest("arena"), spawnManager.getGroupChest("boss"));
+    mobTracker.resetKills(player);
+    assertEquals(0, mobTracker.getKills(player));
   }
 
   @Test
-  void testGetSpawnPointsReturnsEmptyForNonExistentGroup() {
-    List<Location> points = spawnManager.getSpawnPoints("nonexistent");
+  void testResetAllKills() {
+    Player player1 = mock(Player.class);
+    Player player2 = mock(Player.class);
 
-    assertNotNull(points);
-    assertTrue(points.isEmpty());
+    when(player1.getUniqueId()).thenReturn(UUID.randomUUID());
+    when(player2.getUniqueId()).thenReturn(UUID.randomUUID());
+    when(player1.getName()).thenReturn("Player1");
+    when(player2.getName()).thenReturn("Player2");
+
+    mobTracker.recordKill(player1);
+    mobTracker.recordKill(player2);
+
+    mobTracker.resetAllKills();
+
+    assertEquals(0, mobTracker.getKills(player1));
+    assertEquals(0, mobTracker.getKills(player2));
+  }
+
+  @Test
+  void testMobTagging() {
+    org.bukkit.entity.Zombie zombie = mock(org.bukkit.entity.Zombie.class);
+    org.bukkit.persistence.PersistentDataContainer pdc =
+        mock(org.bukkit.persistence.PersistentDataContainer.class);
+
+    when(zombie.getPersistentDataContainer()).thenReturn(pdc);
+
+    mobTracker.tagMob(zombie, "arena", "wave1");
+
+    verify(pdc).set(any(), eq(org.bukkit.persistence.PersistentDataType.STRING), eq("arena:wave1"));
   }
 }

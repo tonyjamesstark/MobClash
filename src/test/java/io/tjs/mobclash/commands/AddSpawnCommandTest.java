@@ -66,13 +66,15 @@ class AddSpawnCommandTest {
     // Mock command block and console getName() to prevent NPE
     when(commandBlock.getName()).thenReturn("CommandBlock");
     when(console.getName()).thenReturn("Console");
+    when(player.getName()).thenReturn("TestPlayer");
+    when(command.getName()).thenReturn("addspawn");
   }
 
   @Test
-  void testPlayerWithPermissionCanAddSpawn() {
-    when(player.hasPermission("mobspawner.addspawn")).thenReturn(true);
+  void testAddSpawnSuccessfully() {
     Location loc = new Location(world, 100, 64, 100);
     when(player.getLocation()).thenReturn(loc);
+    when(player.hasPermission("mobspawner.addspawn")).thenReturn(true);
     when(spawnManager.getSpawnPoints("test-group")).thenReturn(List.of(loc));
 
     boolean result =
@@ -80,32 +82,38 @@ class AddSpawnCommandTest {
 
     assertTrue(result);
     verify(spawnManager).addSpawnPoint("test-group", loc);
+    verify(player).sendMessage("§aSpawn added!");
   }
 
   @Test
-  void testPlayerWithoutPermissionCannotAddSpawn() {
+  void testAddSpawnNoPermission() {
     when(player.hasPermission("mobspawner.addspawn")).thenReturn(false);
-    when(langManager.getMessage("no-permission")).thenReturn("No permission!");
 
     boolean result =
         addSpawnCommand.onCommand(player, command, "addspawn", new String[] {"test-group"});
 
     assertTrue(result);
+    verify(player).sendMessage("§cNo permission!");
     verify(spawnManager, never()).addSpawnPoint(anyString(), any());
-    verify(player).sendMessage("No permission!");
+  }
+
+  @Test
+  void testAddSpawnMissingArguments() {
+    when(player.hasPermission("mobspawner.addspawn")).thenReturn(true);
+
+    boolean result = addSpawnCommand.onCommand(player, command, "addspawn", new String[] {});
+
+    assertTrue(result);
+    verify(player).sendMessage("§cUsage: /addspawn <group>");
+    verify(spawnManager, never()).addSpawnPoint(anyString(), any());
   }
 
   @Test
   void testCommandBlockBypassesPermission() {
-    // Command blocks don't have hasPermission method, but BaseCommand handles this
-    Location loc = new Location(world, 100, 64, 100);
-    when(player.getLocation()).thenReturn(loc);
-    when(spawnManager.getSpawnPoints("test-group")).thenReturn(List.of(loc));
-
+    // Command blocks can't be players, so this should fail with "players-only"
     boolean result =
         addSpawnCommand.onCommand(commandBlock, command, "addspawn", new String[] {"test-group"});
 
-    // Command block can't be a player, so this should fail with "players-only"
     assertTrue(result);
     verify(commandBlock).sendMessage("§cPlayers only!");
   }
@@ -120,18 +128,6 @@ class AddSpawnCommandTest {
 
     assertTrue(result);
     verify(console).sendMessage("§cPlayers only!");
-    verify(spawnManager, never()).addSpawnPoint(anyString(), any());
-  }
-
-  @Test
-  void testMissingArguments() {
-    when(player.hasPermission("mobspawner.addspawn")).thenReturn(true);
-    when(langManager.getMessage("addspawn-usage")).thenReturn("Usage: /addspawn <group>");
-
-    boolean result = addSpawnCommand.onCommand(player, command, "addspawn", new String[] {});
-
-    assertTrue(result);
-    verify(player).sendMessage("Usage: /addspawn <group>");
     verify(spawnManager, never()).addSpawnPoint(anyString(), any());
   }
 }

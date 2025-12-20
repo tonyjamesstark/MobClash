@@ -21,20 +21,30 @@ commands:
     usage: /listgroups
     permission: mobspawner.listgroups
   
+  listspawns:
+    description: List all spawn point coordinates for a group
+    usage: /listspawns <group>
+    permission: mobspawner.listspawns
+  
   showspawns:
     description: Show spawn points with visual markers
     usage: /showspawns <group>
     permission: mobspawner.showspawns
   
   setchest:
-    description: Set the spawn egg chest for a group
-    usage: /setchest <group>
+    description: Set the spawn egg chest for a group wave
+    usage: /setchest <group> <wave>
     permission: mobspawner.setchest
   
   summonmobs:
-    description: Summon mobs at spawn points
-    usage: /summonmobs <group> <random|all> [amount]
+    description: Summon mobs at spawn points from a specific wave
+    usage: /summonmobs <group> <wave> <random|all> [amount]
     permission: mobspawner.summon
+
+  kills:
+    description: View kill statistics and leaderboard
+    usage: /kills [top|reset|resetall] [amount]
+    permission: mobspawner.kills
 
 permissions:
   mobspawner.*:
@@ -44,9 +54,12 @@ permissions:
       mobspawner.addspawn: true
       mobspawner.removespawn: true
       mobspawner.listgroups: true
+      mobspawner.listspawns: true
       mobspawner.showspawns: true
       mobspawner.setchest: true
       mobspawner.summon: true
+      mobspawner.kills: true
+      mobspawner.kills.resetall: true
   
   mobspawner.addspawn:
     description: Allows adding spawn points
@@ -60,6 +73,10 @@ permissions:
     description: Allows listing spawn groups
     default: op
   
+  mobspawner.listspawns:
+    description: Allows listing spawn point coordinates
+    default: op
+  
   mobspawner.showspawns:
     description: Allows showing spawn points visually
     default: op
@@ -70,4 +87,12 @@ permissions:
   
   mobspawner.summon:
     description: Allows summoning mobs
+    default: op
+  
+  mobspawner.kills:
+    description: Allows viewing kill statistics
+    default: true
+  
+  mobspawner.kills.resetall:
+    description: Allows resetting all player kills
     default: op

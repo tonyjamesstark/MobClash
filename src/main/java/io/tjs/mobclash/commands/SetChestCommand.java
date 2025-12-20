@@ -17,12 +17,13 @@ public class SetChestCommand extends BaseCommand {
 
   @Override
   protected boolean execute(CommandSender sender, String[] args) {
-    if (args.length < 1) {
+    if (args.length < 2) {
       sender.sendMessage(langManager.getMessage("setchest-usage"));
       return true;
     }
 
     String groupName = args[0];
+    String waveName = args[1];
 
     if (!spawnManager.hasGroup(groupName)) {
       sender.sendMessage(langManager.getMessage("group-not-exist", groupName));
@@ -37,8 +38,8 @@ public class SetChestCommand extends BaseCommand {
       return true;
     }
 
-    spawnManager.setGroupChest(groupName, targetBlock.getLocation());
-    sender.sendMessage(langManager.getMessage("setchest-success", groupName));
+    spawnManager.setGroupChest(groupName, waveName, targetBlock.getLocation());
+    sender.sendMessage(langManager.getMessage("setchest-success", groupName, waveName));
     return true;
   }
 }

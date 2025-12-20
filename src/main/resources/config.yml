@@ -8,5 +8,10 @@
 # - OFF: Disables all plugin logging (not recommended)
 logging-level: INFO
 
-# Note: Spawn groups and chest locations are managed through commands
-# and will be automatically saved below this configuration
+# Loot handling
+# If true, mob drops go directly into player inventories (drops on ground if full)
+# If false, mobs drop loot normally on the ground
+loot-to-inventory: false
+
+# Note: Spawn groups, chest locations, and kill tracking data
+# are managed through commands and will be automatically saved below
