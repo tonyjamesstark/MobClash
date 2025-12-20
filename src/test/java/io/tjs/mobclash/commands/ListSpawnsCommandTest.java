@@ -3,14 +3,15 @@ package io.tjs.mobclash.commands;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import io.tjs.mobclash.MobClashPlugin;
 import io.tjs.mobclash.managers.LanguageManager;
 import io.tjs.mobclash.managers.SpawnManager;
 import java.util.List;
+import java.util.logging.Level;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.plugin.java.JavaPlugin;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,7 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class ListSpawnsCommandTest {
 
   @Mock(lenient = true)
-  private JavaPlugin plugin;
+  private MobClashPlugin plugin;
 
   @Mock(lenient = true)
   private SpawnManager spawnManager;
@@ -43,6 +44,9 @@ class ListSpawnsCommandTest {
   @BeforeEach
   void setUp() {
     listSpawnsCommand = new ListSpawnsCommand(plugin, spawnManager, langManager);
+
+    when(plugin.getName()).thenReturn("MobClash");
+    doNothing().when(plugin).log(any(Level.class), anyString());
 
     when(langManager.getMessage("listspawns-usage")).thenReturn("§cUsage: /listspawns <group>");
     when(langManager.getMessage(eq("group-not-exist"), anyString()))

@@ -45,6 +45,7 @@ class MobTrackerTest {
   void setUp() {
     playerUuid = UUID.randomUUID();
 
+    when(plugin.getName()).thenReturn("MobClash");
     when(plugin.getConfig()).thenReturn(config);
     when(config.contains(anyString())).thenReturn(false);
     doNothing().when(plugin).log(any(Level.class), anyString());
