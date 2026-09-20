@@ -7,36 +7,43 @@ description: Advanced mob spawning system with configurable spawn groups
 
 commands:
   addspawn:
-    description: Add a spawn point to a group
-    usage: /addspawn <group>
-  
+    description: Add a spawn point to a group, at your position
+    usage: /<command> <group>
+
   removespawn:
-    description: Remove the nearest spawn point from a group
-    usage: /removespawn <group>
-  
+    description: Remove the spawn point nearest you from a group
+    usage: /<command> <group>
+
   listgroups:
-    description: List all spawn groups
-    usage: /listgroups
-  
+    description: List every spawn group and how many points it has
+    usage: /<command>
+
   listspawns:
-    description: List all spawn point coordinates for a group
-    usage: /listspawns <group>
-  
+    description: List the coordinates of every spawn point in a group
+    usage: /<command> <group>
+
   showspawns:
-    description: Show spawn points with visual markers
-    usage: /showspawns <group>
-  
+    description: Flash a particle marker at each of a group's spawn points
+    usage: /<command> <group>
+
   setchest:
-    description: Set the spawn egg chest for a group wave
-    usage: /setchest <group> <wave>
-  
+    description: Set a wave's spawn egg chest to the chest you are looking at
+    usage: /<command> <group> <wave>
+
   summonmobs:
-    description: Summon mobs at spawn points from a specific wave
-    usage: /summonmobs <group> <wave> <random|all> [amount]
+    description: Summon a wave's mobs at one spawn point or at all of them
+    usage: |-
+      /<command> <group> <wave> random [amount] - at one random spawn point
+      /<command> <group> <wave> all [amount] - at every spawn point
+      amount is 1-100 per point, default 1, and the total is capped by max-mobs-per-summon
 
   kills:
-    description: View kill statistics and leaderboard
-    usage: /kills [top|reset|resetall] [amount]
+    description: Show your MobClash kills, the leaderboard, or reset them
+    usage: |-
+      /<command> - your own kill count
+      /<command> top [amount] - leaderboard, default 10, maximum 50
+      /<command> reset - clear your own kills
+      /<command> resetall - clear every player's kills
 
 permissions:
   mobclash.*:

@@ -51,7 +51,7 @@ no-spawn-eggs: "&cNo spawn eggs found in the chest!"
 summon-too-large: "&cThat would spawn {0} mobs, over the limit of {1}. Lower the amount or raise max-mobs-per-summon."
 
 # Kills Command
-kills-usage: "&cUsage: /kills [top|reset|resetall] [amount]"
+kills-usage: "&cUsage: /kills [top [amount] | reset | resetall] &7- plain /kills shows your own"
 kills-personal: "&aYou have killed &e{0}&a MobClash mobs!"
 kills-none: "&cNo kills recorded yet!"
 kills-top-header: "&a=== Top {0} MobClash Killers ==="

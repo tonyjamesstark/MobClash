@@ -86,7 +86,7 @@ Create multiple chests with different mob compositions:
 | `/removespawn <group>` | Remove the nearest spawn point from a group | `mobclash.removespawn` |
 | `/listgroups` | List all spawn groups and their point counts | `mobclash.listgroups` |
 | `/listspawns <group>` | List all spawn point coordinates for a group | `mobclash.listspawns` |
-| `/showspawns <group>` | Display spawn points with visual markers (3 seconds) | `mobclash.showspawns` |
+| `/showspawns <group>` | Flash a particle marker at each spawn point | `mobclash.showspawns` |
 | `/setchest <group> <wave>` | Set the spawn egg chest for a group wave (look at chest) | `mobclash.setchest` |
 | `/summonmobs <group> <wave> <random\|all> [amount]` | Summon mobs from the specified wave | `mobclash.summon` |
 | `/kills [top\|reset\|resetall] [amount]` | View kill statistics and leaderboard | `mobclash.kills` |

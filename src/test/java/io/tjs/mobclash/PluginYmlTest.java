@@ -108,6 +108,27 @@ class PluginYmlTest {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
+  void everyCommandHelpEntryIsUsableAsBukkitRendersIt() throws IOException {
+    // /help renders description and usage straight from here, and substitutes <command> with the
+    // label the sender typed. A hardcoded name prints the wrong one under the plugin-qualified
+    // form, /mobclash:addspawn.
+    for (Map.Entry<String, Object> entry : section("commands").entrySet()) {
+      Map<String, Object> declared = (Map<String, Object>) entry.getValue();
+
+      Object description = declared.get("description");
+      assertNotNull(description, entry.getKey() + " has no description for /help to show");
+      assertFalse(description.toString().isBlank(), entry.getKey() + " has a blank description");
+
+      Object usage = declared.get("usage");
+      assertNotNull(usage, entry.getKey() + " has no usage for /help to show");
+      assertTrue(
+          usage.toString().contains("/<command>"),
+          entry.getKey() + " hardcodes its own name in usage instead of /<command>: " + usage);
+    }
+  }
+
+  @Test
   void everyDeclaredCommandIsRegisteredByThePlugin() throws IOException {
     // getCommand returns null for a command missing from plugin.yml, and the reverse -- a command
     // declared here with no executor -- silently prints the usage line instead of running.
