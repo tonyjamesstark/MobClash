@@ -1,98 +1,153 @@
 name: MobClash
-version: 1.0.0
+version: ${project.version}
 main: io.tjs.mobclash.MobClashPlugin
 api-version: 1.20
-author: YourName
+author: tjs
 description: Advanced mob spawning system with configurable spawn groups
 
 commands:
   addspawn:
     description: Add a spawn point to a group
     usage: /addspawn <group>
-    permission: mobspawner.addspawn
   
   removespawn:
     description: Remove the nearest spawn point from a group
     usage: /removespawn <group>
-    permission: mobspawner.removespawn
   
   listgroups:
     description: List all spawn groups
     usage: /listgroups
-    permission: mobspawner.listgroups
   
   listspawns:
     description: List all spawn point coordinates for a group
     usage: /listspawns <group>
-    permission: mobspawner.listspawns
   
   showspawns:
     description: Show spawn points with visual markers
     usage: /showspawns <group>
-    permission: mobspawner.showspawns
   
   setchest:
     description: Set the spawn egg chest for a group wave
     usage: /setchest <group> <wave>
-    permission: mobspawner.setchest
   
   summonmobs:
     description: Summon mobs at spawn points from a specific wave
     usage: /summonmobs <group> <wave> <random|all> [amount]
-    permission: mobspawner.summon
 
   kills:
     description: View kill statistics and leaderboard
     usage: /kills [top|reset|resetall] [amount]
-    permission: mobspawner.kills
 
 permissions:
-  mobspawner.*:
-    description: Grants all MobSpawner permissions
+  mobclash.*:
+    description: Grants all MobClash permissions
     default: op
     children:
-      mobspawner.addspawn: true
-      mobspawner.removespawn: true
-      mobspawner.listgroups: true
-      mobspawner.listspawns: true
-      mobspawner.showspawns: true
-      mobspawner.setchest: true
-      mobspawner.summon: true
-      mobspawner.kills: true
-      mobspawner.kills.resetall: true
-  
-  mobspawner.addspawn:
+      mobclash.addspawn: true
+      mobclash.removespawn: true
+      mobclash.listgroups: true
+      mobclash.listspawns: true
+      mobclash.showspawns: true
+      mobclash.setchest: true
+      mobclash.summon: true
+      mobclash.kills: true
+      mobclash.kills.resetall: true
+
+  mobclash.addspawn:
     description: Allows adding spawn points
     default: op
-  
-  mobspawner.removespawn:
+
+  mobclash.removespawn:
     description: Allows removing spawn points
     default: op
-  
-  mobspawner.listgroups:
+
+  mobclash.listgroups:
     description: Allows listing spawn groups
     default: op
-  
-  mobspawner.listspawns:
+
+  mobclash.listspawns:
     description: Allows listing spawn point coordinates
     default: op
-  
-  mobspawner.showspawns:
+
+  mobclash.showspawns:
     description: Allows showing spawn points visually
     default: op
-  
-  mobspawner.setchest:
+
+  mobclash.setchest:
     description: Allows setting spawn egg chests
     default: op
-  
-  mobspawner.summon:
+
+  mobclash.summon:
     description: Allows summoning mobs
     default: op
-  
-  mobspawner.kills:
+
+  mobclash.kills:
     description: Allows viewing kill statistics
     default: true
-  
-  mobspawner.kills.resetall:
+
+  mobclash.kills.resetall:
     description: Allows resetting all player kills
     default: op
+
+  # Deprecated mobspawner.* namespace, from before the plugin was renamed. Kept as parents
+  # of the new nodes so an existing grant still works; default false so they only take
+  # effect where a permissions plugin grants them explicitly.
+  mobspawner.*:
+    description: Deprecated alias for mobclash.*
+    default: false
+    children:
+      mobclash.*: true
+
+  mobspawner.addspawn:
+    description: Deprecated alias for mobclash.addspawn
+    default: false
+    children:
+      mobclash.addspawn: true
+
+  mobspawner.removespawn:
+    description: Deprecated alias for mobclash.removespawn
+    default: false
+    children:
+      mobclash.removespawn: true
+
+  mobspawner.listgroups:
+    description: Deprecated alias for mobclash.listgroups
+    default: false
+    children:
+      mobclash.listgroups: true
+
+  mobspawner.listspawns:
+    description: Deprecated alias for mobclash.listspawns
+    default: false
+    children:
+      mobclash.listspawns: true
+
+  mobspawner.showspawns:
+    description: Deprecated alias for mobclash.showspawns
+    default: false
+    children:
+      mobclash.showspawns: true
+
+  mobspawner.setchest:
+    description: Deprecated alias for mobclash.setchest
+    default: false
+    children:
+      mobclash.setchest: true
+
+  mobspawner.summon:
+    description: Deprecated alias for mobclash.summon
+    default: false
+    children:
+      mobclash.summon: true
+
+  mobspawner.kills:
+    description: Deprecated alias for mobclash.kills
+    default: false
+    children:
+      mobclash.kills: true
+
+  mobspawner.kills.resetall:
+    description: Deprecated alias for mobclash.kills.resetall
+    default: false
+    children:
+      mobclash.kills.resetall: true

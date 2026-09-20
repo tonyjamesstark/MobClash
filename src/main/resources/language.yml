@@ -7,6 +7,8 @@ no-permission: "&cYou don't have permission to use this command."
 players-only: "&cOnly players can use this command."
 invalid-number: "&cInvalid number!"
 invalid-amount: "&cAmount must be between 1 and 100."
+invalid-name: "&cInvalid name '{0}'! Use letters, numbers, _ and - only (max 32 characters)."
+no-location: "&cThis command must be run by a player or from a command block."
 
 # Group Messages
 group-not-exist: "&cGroup '{0}' doesn't exist!"
@@ -46,6 +48,7 @@ invalid-mode: "&cMode must be 'random' or 'all'!"
 wave-not-set: "&cWave '{1}' not set for group '{0}'! Use /setchest {0} {1} first."
 chest-missing: "&cThe configured chest no longer exists!"
 no-spawn-eggs: "&cNo spawn eggs found in the chest!"
+summon-too-large: "&cThat would spawn {0} mobs, over the limit of {1}. Lower the amount or raise max-mobs-per-summon."
 
 # Kills Command
 kills-usage: "&cUsage: /kills [top|reset|resetall] [amount]"

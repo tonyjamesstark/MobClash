@@ -1,9 +1,11 @@
 package io.tjs.mobclash.managers;
 
+import io.tjs.mobclash.DataFile;
 import io.tjs.mobclash.MobClashPlugin;
 import java.util.*;
 import java.util.logging.Level;
 import org.bukkit.NamespacedKey;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -12,11 +14,13 @@ import org.bukkit.persistence.PersistentDataType;
 public class MobTracker {
 
   private final MobClashPlugin plugin;
+  private final DataFile storage;
   private final NamespacedKey mobclashKey;
   private final Map<UUID, Integer> playerKills;
 
-  public MobTracker(MobClashPlugin plugin) {
+  public MobTracker(MobClashPlugin plugin, DataFile storage) {
     this.plugin = plugin;
+    this.storage = storage;
     this.mobclashKey = new NamespacedKey(plugin, "mobclash_spawned");
     this.playerKills = new HashMap<>();
     loadKillData();
@@ -83,33 +87,41 @@ public class MobTracker {
     plugin.log(Level.INFO, "Reset all player kills");
   }
 
-  /** Load kill data from config */
+  /** Load kill data from the tracking file */
   private void loadKillData() {
     plugin.log(Level.INFO, "Loading kill tracking data...");
-    if (plugin.getConfig().contains("player-kills")) {
-      Map<String, Object> kills =
-          plugin.getConfig().getConfigurationSection("player-kills").getValues(false);
-      for (Map.Entry<String, Object> entry : kills.entrySet()) {
+    // contains() is true for a scalar at this path too, so a hand edit or a crash mid-write
+    // would previously NPE out of the constructor and fail onEnable.
+    ConfigurationSection section = storage.config().getConfigurationSection("player-kills");
+    if (section != null) {
+      for (Map.Entry<String, Object> entry : section.getValues(false).entrySet()) {
         try {
           UUID uuid = UUID.fromString(entry.getKey());
-          int count = (Integer) entry.getValue();
+          // YAML hands back Integer or Long depending on magnitude.
+          int count = ((Number) entry.getValue()).intValue();
           playerKills.put(uuid, count);
-        } catch (Exception e) {
-          plugin.log(Level.INFO, "Failed to load kill data for: " + entry.getKey());
+        } catch (IllegalArgumentException | ClassCastException | NullPointerException e) {
+          plugin.log(
+              Level.WARNING,
+              "Discarding unreadable kill data for '"
+                  + entry.getKey()
+                  + "' (value: "
+                  + entry.getValue()
+                  + ")");
         }
       }
       plugin.log(Level.INFO, "Loaded kill data for " + playerKills.size() + " players");
     }
   }
 
-  /** Save kill data to config */
+  /** Save kill data to the tracking file */
   public void saveKillData() {
     plugin.log(Level.INFO, "Saving kill tracking data...");
-    plugin.getConfig().set("player-kills", null);
+    storage.config().set("player-kills", null);
     for (Map.Entry<UUID, Integer> entry : playerKills.entrySet()) {
-      plugin.getConfig().set("player-kills." + entry.getKey().toString(), entry.getValue());
+      storage.config().set("player-kills." + entry.getKey().toString(), entry.getValue());
     }
-    plugin.saveConfig();
+    storage.save();
     plugin.log(Level.INFO, "Saved kill data for " + playerKills.size() + " players");
   }
 }

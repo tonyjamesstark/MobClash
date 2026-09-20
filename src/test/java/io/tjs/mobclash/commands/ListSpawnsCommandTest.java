@@ -1,13 +1,19 @@
 package io.tjs.mobclash.commands;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import io.tjs.mobclash.MobClashPlugin;
 import io.tjs.mobclash.managers.LanguageManager;
 import io.tjs.mobclash.managers.SpawnManager;
+import java.util.Arrays;
 import java.util.List;
-import java.util.logging.Level;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -15,29 +21,24 @@ import org.bukkit.command.CommandSender;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+/**
+ * getMessage is stubbed to echo its key and its substitutions, so an assertion names both the
+ * branch that fired and the values it formatted -- counting sendMessage calls would pass whether or
+ * not the coordinates were right.
+ */
 @ExtendWith(MockitoExtension.class)
 class ListSpawnsCommandTest {
 
-  @Mock(lenient = true)
-  private MobClashPlugin plugin;
-
-  @Mock(lenient = true)
-  private SpawnManager spawnManager;
-
-  @Mock(lenient = true)
-  private LanguageManager langManager;
-
-  @Mock(lenient = true)
-  private CommandSender sender;
-
-  @Mock(lenient = true)
-  private Command command;
-
-  @Mock(lenient = true)
-  private World world;
+  @Mock private MobClashPlugin plugin;
+  @Mock private SpawnManager spawnManager;
+  @Mock private LanguageManager langManager;
+  @Mock private CommandSender sender;
+  @Mock private Command command;
+  @Mock private World world;
 
   private ListSpawnsCommand listSpawnsCommand;
 
@@ -45,68 +46,69 @@ class ListSpawnsCommandTest {
   void setUp() {
     listSpawnsCommand = new ListSpawnsCommand(plugin, spawnManager, langManager);
 
-    when(plugin.getName()).thenReturn("MobClash");
-    doNothing().when(plugin).log(any(Level.class), anyString());
+    lenient().when(sender.hasPermission("mobclash.listspawns")).thenReturn(true);
+    lenient()
+        .when(langManager.getMessage(anyString(), any(Object[].class)))
+        .thenAnswer(
+            invocation -> {
+              Object[] args = invocation.getArguments();
+              return args[0] + Arrays.toString(Arrays.copyOfRange(args, 1, args.length));
+            });
+  }
 
-    when(langManager.getMessage("listspawns-usage")).thenReturn("§cUsage: /listspawns <group>");
-    when(langManager.getMessage(eq("group-not-exist"), anyString()))
-        .thenReturn("§cGroup doesn't exist!");
-    when(langManager.getMessage(eq("group-no-points"), anyString()))
-        .thenReturn("§cNo spawn points!");
-    when(langManager.getMessage(eq("listspawns-header"), anyString(), anyInt()))
-        .thenReturn("§a=== Spawn Points ===");
-    when(langManager.getMessage(
-            eq("listspawns-entry"), anyInt(), anyString(), anyLong(), anyLong(), anyLong()))
-        .thenReturn("§e#1 world (100, 64, 100)");
+  private boolean run(String... args) {
+    return listSpawnsCommand.onCommand(sender, command, "listspawns", args);
+  }
 
-    when(sender.hasPermission("mobspawner.listspawns")).thenReturn(true);
-    when(command.getName()).thenReturn("listspawns");
+  @Test
+  void eachSpawnPointIsListedInOrderWithRoundedCoordinates() {
     when(world.getName()).thenReturn("world");
-  }
-
-  @Test
-  void testListSpawnsSuccessfully() {
-    Location loc1 = new Location(world, 100, 64, 100);
-    Location loc2 = new Location(world, 200, 64, 200);
-
     when(spawnManager.hasGroup("test-group")).thenReturn(true);
-    when(spawnManager.getSpawnPoints("test-group")).thenReturn(List.of(loc1, loc2));
+    when(spawnManager.getSpawnPoints("test-group"))
+        .thenReturn(
+            List.of(new Location(world, 100.4, 64, 100.6), new Location(world, -200.5, 71, 12)));
 
-    boolean result =
-        listSpawnsCommand.onCommand(sender, command, "listspawns", new String[] {"test-group"});
+    assertTrue(run("test-group"));
 
-    assertTrue(result);
-    verify(sender, times(3)).sendMessage(anyString()); // Header + 2 entries
+    InOrder order = inOrder(sender);
+    order.verify(sender).sendMessage("listspawns-header[test-group, 2]");
+    order.verify(sender).sendMessage("listspawns-entry[1, world, 100, 64, 101]");
+    order.verify(sender).sendMessage("listspawns-entry[2, world, -200, 71, 12]");
+    order.verifyNoMoreInteractions();
   }
 
   @Test
-  void testListSpawnsMissingArguments() {
-    boolean result = listSpawnsCommand.onCommand(sender, command, "listspawns", new String[] {});
-
-    assertTrue(result);
-    verify(sender).sendMessage("§cUsage: /listspawns <group>");
+  void noArgumentsPrintsTheUsage() {
+    assertTrue(run());
+    verify(sender).sendMessage("listspawns-usage[]");
   }
 
   @Test
-  void testListSpawnsGroupDoesNotExist() {
+  void aMissingGroupIsReportedWithItsName() {
     when(spawnManager.hasGroup("nonexistent")).thenReturn(false);
 
-    boolean result =
-        listSpawnsCommand.onCommand(sender, command, "listspawns", new String[] {"nonexistent"});
+    assertTrue(run("nonexistent"));
 
-    assertTrue(result);
-    verify(sender).sendMessage("§cGroup doesn't exist!");
+    verify(sender).sendMessage("group-not-exist[nonexistent]");
   }
 
   @Test
-  void testListSpawnsNoPoints() {
+  void anEmptyGroupIsReportedWithItsName() {
     when(spawnManager.hasGroup("empty-group")).thenReturn(true);
     when(spawnManager.getSpawnPoints("empty-group")).thenReturn(List.of());
 
-    boolean result =
-        listSpawnsCommand.onCommand(sender, command, "listspawns", new String[] {"empty-group"});
+    assertTrue(run("empty-group"));
 
-    assertTrue(result);
-    verify(sender).sendMessage("§cNo spawn points!");
+    verify(sender).sendMessage("group-no-points[empty-group]");
+  }
+
+  @Test
+  void aSenderWithoutThePermissionIsRefused() {
+    when(sender.hasPermission("mobclash.listspawns")).thenReturn(false);
+
+    assertTrue(run("test-group"));
+
+    verify(sender).sendMessage("no-permission[]");
+    verify(spawnManager, never()).hasGroup(anyString());
   }
 }

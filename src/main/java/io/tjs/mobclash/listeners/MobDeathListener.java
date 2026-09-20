@@ -58,19 +58,21 @@ public class MobDeathListener implements Listener {
     List<ItemStack> drops = new ArrayList<>(event.getDrops());
     List<ItemStack> notAdded = new ArrayList<>();
 
+    int offered = 0;
     for (ItemStack drop : drops) {
-      // Try to add to inventory
-      if (!player.getInventory().addItem(drop).isEmpty()) {
-        // Inventory full, keep in drops
-        notAdded.add(drop);
-      }
+      offered += drop.getAmount();
+      // addItem returns what did not fit. The previous code re-added the original stack instead,
+      // which was correct only because CraftBukkit happens to decrement it in place; an
+      // implementation that copied would have duplicated the items.
+      notAdded.addAll(player.getInventory().addItem(drop).values());
     }
 
     // Clear original drops and only leave items that didn't fit
     event.getDrops().clear();
     event.getDrops().addAll(notAdded);
 
-    int added = drops.size() - notAdded.size();
+    int leftOver = notAdded.stream().mapToInt(ItemStack::getAmount).sum();
+    int added = offered - leftOver;
     if (added > 0) {
       plugin.log(
           Level.INFO, "Added " + added + " items directly to " + player.getName() + "'s inventory");

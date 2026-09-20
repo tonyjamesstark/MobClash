@@ -5,14 +5,18 @@ import io.tjs.mobclash.managers.LanguageManager;
 import io.tjs.mobclash.managers.MobTracker;
 import io.tjs.mobclash.managers.SpawnManager;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
@@ -20,7 +24,7 @@ public class SummonMobsCommand extends BaseCommand {
 
   public SummonMobsCommand(
       MobClashPlugin plugin, SpawnManager spawnManager, LanguageManager langManager) {
-    super(plugin, spawnManager, langManager, "mobspawner.summon", false);
+    super(plugin, spawnManager, langManager, "mobclash.summon", false);
   }
 
   @Override
@@ -61,6 +65,15 @@ public class SummonMobsCommand extends BaseCommand {
       return true;
     }
 
+    // "all" mode spawns amount * locations.size() entities in one synchronous tick, and nothing
+    // bounds the number of spawn points. Cap the product, which is what actually lands.
+    int plannedTotal = mode.equals("all") ? amount * locations.size() : amount;
+    int maxPerSummon = plugin.getConfig().getInt("max-mobs-per-summon", 500);
+    if (maxPerSummon > 0 && plannedTotal > maxPerSummon) {
+      sender.sendMessage(langManager.getMessage("summon-too-large", plannedTotal, maxPerSummon));
+      return true;
+    }
+
     Block block = chestLocation.getBlock();
     if (block.getType() != Material.CHEST) {
       sender.sendMessage(langManager.getMessage("chest-missing"));
@@ -75,34 +88,31 @@ public class SummonMobsCommand extends BaseCommand {
       return true;
     }
 
-    ((MobClashPlugin) plugin)
-        .log(
-            Level.INFO,
-            "Summoning "
-                + amount
-                + " mob(s) for group '"
-                + groupName
-                + "' wave '"
-                + waveName
-                + "' in mode '"
-                + mode
-                + "' by "
-                + sender.getName());
-    ((MobClashPlugin) plugin)
-        .log(Level.INFO, "Available mob types: " + getUniqueMobTypes(spawnEggs));
+    plugin.log(
+        Level.INFO,
+        "Summoning "
+            + amount
+            + " mob(s) for group '"
+            + groupName
+            + "' wave '"
+            + waveName
+            + "' in mode '"
+            + mode
+            + "' by "
+            + sender.getName());
+    plugin.log(Level.INFO, "Available mob types: " + getUniqueMobTypes(spawnEggs));
 
     int spawned = summonMobs(mode, locations, spawnEggs, amount, groupName, waveName);
 
-    ((MobClashPlugin) plugin)
-        .log(
-            Level.INFO,
-            "Successfully spawned "
-                + spawned
-                + " mob(s) for group '"
-                + groupName
-                + "' wave '"
-                + waveName
-                + "'");
+    plugin.log(
+        Level.INFO,
+        "Successfully spawned "
+            + spawned
+            + " mob(s) for group '"
+            + groupName
+            + "' wave '"
+            + waveName
+            + "'");
 
     sender.sendMessage(langManager.getMessage("summonmobs-success", spawned, groupName, waveName));
     return true;
@@ -126,20 +136,55 @@ public class SummonMobsCommand extends BaseCommand {
     }
   }
 
+  /**
+   * The entity an egg spawns, resolved through the namespaced key both sides share.
+   *
+   * <p>Matching the enum names instead (MOOSHROOM_SPAWN_EGG -> EntityType.MOOSHROOM) is a
+   * coincidence Bukkit does not guarantee, and it already fails: the constants for the mooshroom
+   * and snow golem eggs are MUSHROOM_COW and SNOWMAN. Keys are stable across those renames.
+   */
+  private static final Map<String, EntityType> ENTITY_TYPES_BY_KEY = entityTypesByKey();
+
+  private static Map<String, EntityType> entityTypesByKey() {
+    Map<String, EntityType> byKey = new HashMap<>();
+    for (EntityType type : EntityType.values()) {
+      try {
+        byKey.put(type.getKey().getKey(), type);
+      } catch (IllegalArgumentException noKey) {
+        // EntityType.UNKNOWN has no namespaced key.
+      }
+    }
+    return byKey;
+  }
+
+  private EntityType eggEntityType(Material eggMaterial) {
+    String eggKey = eggMaterial.getKey().getKey();
+    if (!eggKey.endsWith("_spawn_egg")) {
+      return null;
+    }
+    return ENTITY_TYPES_BY_KEY.get(eggKey.substring(0, eggKey.length() - "_spawn_egg".length()));
+  }
+
   private List<EntityType> getSpawnEggsFromChest(Inventory inv) {
     List<EntityType> spawnEggs = new ArrayList<>();
 
     for (ItemStack item : inv.getContents()) {
-      if (item != null && item.getType().toString().endsWith("_SPAWN_EGG")) {
-        String mobName = item.getType().toString().replace("_SPAWN_EGG", "");
-        try {
-          EntityType entityType = EntityType.valueOf(mobName);
-          for (int i = 0; i < item.getAmount(); i++) {
-            spawnEggs.add(entityType);
-          }
-        } catch (IllegalArgumentException e) {
-          // Invalid entity type, skip
-        }
+      if (item == null || !item.getType().toString().endsWith("_SPAWN_EGG")) {
+        continue;
+      }
+      EntityType entityType = eggEntityType(item.getType());
+      if (entityType == null) {
+        // Silently dropping the egg leaves the operator with a partially correct mob pool and
+        // nothing to debug from.
+        plugin.log(
+            Level.WARNING,
+            "Ignoring "
+                + item.getType()
+                + " in the wave chest: no entity type matches it on this server version");
+        continue;
+      }
+      for (int i = 0; i < item.getAmount(); i++) {
+        spawnEggs.add(entityType);
       }
     }
 
@@ -161,44 +206,52 @@ public class SummonMobsCommand extends BaseCommand {
       int amount,
       String groupName,
       String waveName) {
-    int spawned = 0;
-    MobTracker mobTracker = ((MobClashPlugin) plugin).getMobTracker();
+    MobTracker mobTracker = plugin.getMobTracker();
 
+    // "random" is one target, "all" is every target; the spawn loop itself is identical.
+    List<Location> targets;
     if (mode.equals("random")) {
       Location spawnLoc = locations.get(spawnManager.getRandom().nextInt(locations.size()));
-      ((MobClashPlugin) plugin)
-          .log(
-              Level.INFO,
-              "Spawning at random location: "
-                  + String.format(
-                      "(%.1f, %.1f, %.1f)", spawnLoc.getX(), spawnLoc.getY(), spawnLoc.getZ()));
+      targets = List.of(spawnLoc);
+      plugin.log(
+          Level.INFO,
+          "Spawning at random location: "
+              + String.format(
+                  "(%.1f, %.1f, %.1f)", spawnLoc.getX(), spawnLoc.getY(), spawnLoc.getZ()));
+    } else {
+      targets = locations;
+      plugin.log(Level.INFO, "Spawning at all " + locations.size() + " locations");
+    }
 
+    int spawned = 0;
+    int refused = 0;
+    for (Location spawnLoc : targets) {
       for (int i = 0; i < amount; i++) {
         EntityType entityType = spawnEggs.get(spawnManager.getRandom().nextInt(spawnEggs.size()));
-        org.bukkit.entity.Entity entity = spawnLoc.getWorld().spawnEntity(spawnLoc, entityType);
+        Entity entity = spawnLoc.getWorld().spawnEntity(spawnLoc, entityType);
 
-        // Tag the mob
-        if (entity instanceof org.bukkit.entity.LivingEntity) {
-          mobTracker.tagMob((org.bukkit.entity.LivingEntity) entity, groupName, waveName);
+        // A cancelled CreatureSpawnEvent (region protection, anti-lag plugins) still hands back
+        // the entity object, so counting unconditionally reports mobs that do not exist.
+        if (entity == null || !entity.isValid()) {
+          refused++;
+          continue;
+        }
+
+        if (entity instanceof LivingEntity living) {
+          mobTracker.tagMob(living, groupName, waveName);
         }
         spawned++;
       }
-    } else {
-      ((MobClashPlugin) plugin)
-          .log(Level.INFO, "Spawning at all " + locations.size() + " locations");
+    }
 
-      for (Location spawnLoc : locations) {
-        for (int i = 0; i < amount; i++) {
-          EntityType entityType = spawnEggs.get(spawnManager.getRandom().nextInt(spawnEggs.size()));
-          org.bukkit.entity.Entity entity = spawnLoc.getWorld().spawnEntity(spawnLoc, entityType);
-
-          // Tag the mob
-          if (entity instanceof org.bukkit.entity.LivingEntity) {
-            mobTracker.tagMob((org.bukkit.entity.LivingEntity) entity, groupName, waveName);
-          }
-          spawned++;
-        }
-      }
+    if (refused > 0) {
+      plugin.log(
+          Level.WARNING,
+          refused
+              + " of "
+              + (spawned + refused)
+              + " mobs were refused by the server, most likely a protection plugin cancelling"
+              + " the spawn");
     }
 
     return spawned;

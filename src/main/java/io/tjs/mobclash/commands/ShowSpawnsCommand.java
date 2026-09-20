@@ -1,21 +1,18 @@
 package io.tjs.mobclash.commands;
 
+import io.tjs.mobclash.MobClashPlugin;
 import io.tjs.mobclash.managers.LanguageManager;
 import io.tjs.mobclash.managers.SpawnManager;
 import java.util.List;
-import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.AreaEffectCloud;
-import org.bukkit.entity.EntityType;
-import org.bukkit.plugin.java.JavaPlugin;
 
 public class ShowSpawnsCommand extends BaseCommand {
 
   public ShowSpawnsCommand(
-      JavaPlugin plugin, SpawnManager spawnManager, LanguageManager langManager) {
-    super(plugin, spawnManager, langManager, "mobspawner.showspawns", false);
+      MobClashPlugin plugin, SpawnManager spawnManager, LanguageManager langManager) {
+    super(plugin, spawnManager, langManager, "mobclash.showspawns", false);
   }
 
   @Override
@@ -38,13 +35,12 @@ public class ShowSpawnsCommand extends BaseCommand {
       return true;
     }
 
+    // Particles rather than AreaEffectCloud entities: a marker should not appear in @e
+    // selectors, fire EntitySpawnEvent for every other plugin, or be written into the chunk.
+    // The old setColor(Color.RED) was inert anyway, since FLAME is not a colourable particle.
     for (Location loc : locations) {
-      AreaEffectCloud cloud =
-          (AreaEffectCloud) loc.getWorld().spawnEntity(loc, EntityType.AREA_EFFECT_CLOUD);
-      cloud.setDuration(60); // 3 seconds
-      cloud.setRadius(1.0f);
-      cloud.setParticle(Particle.FLAME);
-      cloud.setColor(Color.RED);
+      loc.getWorld()
+          .spawnParticle(Particle.FLAME, loc.clone().add(0.5, 0.5, 0.5), 40, 0.3, 0.6, 0.3, 0.01);
     }
 
     sender.sendMessage(langManager.getMessage("showspawns-success", groupName, locations.size()));

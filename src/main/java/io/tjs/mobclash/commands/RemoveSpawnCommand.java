@@ -1,16 +1,16 @@
 package io.tjs.mobclash.commands;
 
+import io.tjs.mobclash.MobClashPlugin;
 import io.tjs.mobclash.managers.LanguageManager;
 import io.tjs.mobclash.managers.SpawnManager;
+import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
 
 public class RemoveSpawnCommand extends BaseCommand {
 
   public RemoveSpawnCommand(
-      JavaPlugin plugin, SpawnManager spawnManager, LanguageManager langManager) {
-    super(plugin, spawnManager, langManager, "mobspawner.removespawn", true);
+      MobClashPlugin plugin, SpawnManager spawnManager, LanguageManager langManager) {
+    super(plugin, spawnManager, langManager, "mobclash.removespawn", false);
   }
 
   @Override
@@ -20,7 +20,6 @@ public class RemoveSpawnCommand extends BaseCommand {
       return true;
     }
 
-    Player player = getPlayer(sender);
     String groupName = args[0];
 
     if (!spawnManager.hasGroup(groupName)) {
@@ -33,8 +32,17 @@ public class RemoveSpawnCommand extends BaseCommand {
       return true;
     }
 
-    if (spawnManager.removeNearestSpawnPoint(groupName, player.getLocation())) {
+    // "Nearest" is measured from the command block's own position when one runs this.
+    Location location = senderLocation(sender);
+    if (location == null) {
+      sender.sendMessage(langManager.getMessage("no-location"));
+      return true;
+    }
+
+    if (spawnManager.removeNearestSpawnPoint(groupName, location)) {
       sender.sendMessage(langManager.getMessage("removespawn-success", groupName));
+    } else {
+      sender.sendMessage(langManager.getMessage("group-no-points", groupName));
     }
 
     return true;

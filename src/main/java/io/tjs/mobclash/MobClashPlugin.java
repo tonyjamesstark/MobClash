@@ -5,7 +5,11 @@ import io.tjs.mobclash.listeners.MobDeathListener;
 import io.tjs.mobclash.managers.LanguageManager;
 import io.tjs.mobclash.managers.MobTracker;
 import io.tjs.mobclash.managers.SpawnManager;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.logging.Level;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class MobClashPlugin extends JavaPlugin {
@@ -25,10 +29,14 @@ public class MobClashPlugin extends JavaPlugin {
     languageManager = new LanguageManager(this);
     log(Level.INFO, "Language manager loaded");
 
-    spawnManager = new SpawnManager(this);
+    DataFile spawns = new DataFile(this, "spawns.yml");
+    DataFile kills = new DataFile(this, "kills.yml");
+    migrateRuntimeStateOutOfConfig(spawns, kills);
+
+    spawnManager = new SpawnManager(this, spawns);
     log(Level.INFO, "Spawn manager loaded with " + spawnManager.getAllGroups().size() + " groups");
 
-    mobTracker = new MobTracker(this);
+    mobTracker = new MobTracker(this, kills);
     log(Level.INFO, "Mob tracker initialized");
 
     registerCommands();
@@ -44,17 +52,44 @@ public class MobClashPlugin extends JavaPlugin {
   public void onDisable() {
     log(Level.INFO, "Disabling MobClash plugin...");
 
+    // Each save is isolated: a failure in one must not discard the other's data, and Bukkit
+    // swallows anything thrown out of onDisable.
     if (spawnManager != null) {
-      spawnManager.saveConfigData();
-      log(Level.INFO, "Spawn configuration saved");
+      try {
+        spawnManager.saveConfigData();
+        log(Level.INFO, "Spawn configuration saved");
+      } catch (RuntimeException e) {
+        getLogger().log(Level.SEVERE, "Failed to save spawn configuration", e);
+      }
     }
 
     if (mobTracker != null) {
-      mobTracker.saveKillData();
-      log(Level.INFO, "Kill tracking data saved");
+      try {
+        mobTracker.saveKillData();
+        log(Level.INFO, "Kill tracking data saved");
+      } catch (RuntimeException e) {
+        getLogger().log(Level.SEVERE, "Failed to save kill tracking data", e);
+      }
     }
 
     getLogger().info("MobClash plugin disabled!");
+  }
+
+  /**
+   * Move spawn and kill data written by older versions out of config.yml, once. Runs before the
+   * managers read their files, so an upgrade keeps its data and a fresh install does nothing.
+   */
+  private void migrateRuntimeStateOutOfConfig(DataFile spawns, DataFile kills) {
+    boolean moved = spawns.adopt(getConfig(), "spawn-groups");
+    moved |= spawns.adopt(getConfig(), "group-chests");
+    moved |= kills.adopt(getConfig(), "player-kills");
+    if (!moved) {
+      return;
+    }
+    spawns.save();
+    kills.save();
+    saveConfig();
+    getLogger().info("Moved spawn and kill data out of config.yml into spawns.yml and kills.yml");
   }
 
   private void loadLoggingLevel() {
@@ -69,35 +104,28 @@ public class MobClashPlugin extends JavaPlugin {
   }
 
   private void registerCommands() {
-    log(Level.INFO, "Registering command: addspawn");
-    getCommand("addspawn").setExecutor(new AddSpawnCommand(this, spawnManager, languageManager));
+    Map<String, CommandExecutor> executors = new LinkedHashMap<>();
+    executors.put("addspawn", new AddSpawnCommand(this, spawnManager, languageManager));
+    executors.put("removespawn", new RemoveSpawnCommand(this, spawnManager, languageManager));
+    executors.put("listgroups", new ListGroupsCommand(this, spawnManager, languageManager));
+    executors.put("listspawns", new ListSpawnsCommand(this, spawnManager, languageManager));
+    executors.put("showspawns", new ShowSpawnsCommand(this, spawnManager, languageManager));
+    executors.put("setchest", new SetChestCommand(this, spawnManager, languageManager));
+    executors.put("summonmobs", new SummonMobsCommand(this, spawnManager, languageManager));
+    executors.put("kills", new KillsCommand(this, spawnManager, languageManager, mobTracker));
 
-    log(Level.INFO, "Registering command: removespawn");
-    getCommand("removespawn")
-        .setExecutor(new RemoveSpawnCommand(this, spawnManager, languageManager));
-
-    log(Level.INFO, "Registering command: listgroups");
-    getCommand("listgroups")
-        .setExecutor(new ListGroupsCommand(this, spawnManager, languageManager));
-
-    log(Level.INFO, "Registering command: listspawns");
-    getCommand("listspawns")
-        .setExecutor(new ListSpawnsCommand(this, spawnManager, languageManager));
-
-    log(Level.INFO, "Registering command: showspawns");
-    getCommand("showspawns")
-        .setExecutor(new ShowSpawnsCommand(this, spawnManager, languageManager));
-
-    log(Level.INFO, "Registering command: setchest");
-    getCommand("setchest").setExecutor(new SetChestCommand(this, spawnManager, languageManager));
-
-    log(Level.INFO, "Registering command: summonmobs");
-    getCommand("summonmobs")
-        .setExecutor(new SummonMobsCommand(this, spawnManager, languageManager));
-
-    log(Level.INFO, "Registering command: kills");
-    getCommand("kills")
-        .setExecutor(new KillsCommand(this, spawnManager, languageManager, mobTracker));
+    executors.forEach(
+        (name, executor) -> {
+          PluginCommand command = getCommand(name);
+          // getCommand returns null for anything missing from plugin.yml; without this the
+          // failure is a bare NPE that does not say which command drifted.
+          if (command == null) {
+            getLogger().severe("Command '" + name + "' is missing from plugin.yml, not registered");
+            return;
+          }
+          log(Level.INFO, "Registering command: " + name);
+          command.setExecutor(executor);
+        });
   }
 
   private void registerListeners() {

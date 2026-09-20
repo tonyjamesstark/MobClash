@@ -1,18 +1,18 @@
 package io.tjs.mobclash.commands;
 
+import io.tjs.mobclash.MobClashPlugin;
 import io.tjs.mobclash.managers.LanguageManager;
 import io.tjs.mobclash.managers.SpawnManager;
 import java.util.List;
 import java.util.Map;
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
-import org.bukkit.plugin.java.JavaPlugin;
 
 public class ListGroupsCommand extends BaseCommand {
 
   public ListGroupsCommand(
-      JavaPlugin plugin, SpawnManager spawnManager, LanguageManager langManager) {
-    super(plugin, spawnManager, langManager, "mobspawner.listgroups", false);
+      MobClashPlugin plugin, SpawnManager spawnManager, LanguageManager langManager) {
+    super(plugin, spawnManager, langManager, "mobclash.listgroups", false);
   }
 
   @Override

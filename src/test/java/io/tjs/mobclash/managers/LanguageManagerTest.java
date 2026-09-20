@@ -18,8 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class LanguageManagerTest {
 
-  @Mock(lenient = true)
-  private JavaPlugin plugin;
+  @Mock private JavaPlugin plugin;
 
   @TempDir Path tempDir;
 

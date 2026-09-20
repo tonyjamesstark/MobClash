@@ -7,9 +7,9 @@ import io.tjs.mobclash.MobClashPlugin;
 import io.tjs.mobclash.managers.LanguageManager;
 import io.tjs.mobclash.managers.SpawnManager;
 import java.util.List;
-import java.util.logging.Level;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.Command;
 import org.bukkit.command.ConsoleCommandSender;
@@ -23,29 +23,23 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class AddSpawnCommandTest {
 
-  @Mock(lenient = true)
-  private MobClashPlugin plugin;
+  @Mock private MobClashPlugin plugin;
 
-  @Mock(lenient = true)
-  private SpawnManager spawnManager;
+  @Mock private SpawnManager spawnManager;
 
-  @Mock(lenient = true)
-  private LanguageManager langManager;
+  @Mock private LanguageManager langManager;
 
-  @Mock(lenient = true)
-  private Player player;
+  @Mock private Player player;
 
-  @Mock(lenient = true)
-  private ConsoleCommandSender console;
+  @Mock private ConsoleCommandSender console;
 
-  @Mock(lenient = true)
-  private BlockCommandSender commandBlock;
+  @Mock private BlockCommandSender commandBlock;
 
-  @Mock(lenient = true)
-  private Command command;
+  @Mock private Command command;
 
-  @Mock(lenient = true)
-  private World world;
+  @Mock private World world;
+
+  @Mock private Block commandBlockBlock;
 
   private AddSpawnCommand addSpawnCommand;
 
@@ -53,28 +47,23 @@ class AddSpawnCommandTest {
   void setUp() {
     addSpawnCommand = new AddSpawnCommand(plugin, spawnManager, langManager);
 
-    // Properly stub all language manager messages
-    when(langManager.getMessage("no-permission")).thenReturn("§cNo permission!");
-    when(langManager.getMessage("players-only")).thenReturn("§cPlayers only!");
-    when(langManager.getMessage("addspawn-usage")).thenReturn("§cUsage: /addspawn <group>");
-    when(langManager.getMessage(eq("addspawn-success"), anyString(), anyInt()))
-        .thenReturn("§aSpawn added!");
-
-    // Mock the log method to prevent NPE
-    doNothing().when(plugin).log(any(Level.class), anyString());
-
-    // Mock command block and console getName() to prevent NPE
-    when(commandBlock.getName()).thenReturn("CommandBlock");
-    when(console.getName()).thenReturn("Console");
-    when(player.getName()).thenReturn("TestPlayer");
-    when(command.getName()).thenReturn("addspawn");
+    // getMessage echoes its key, so an assertion names the branch that fired rather than matching
+    // any string. Only these framing stubs are lenient: every sender logs its name on the way in,
+    // but a given test uses one sender. The rest are strict, so an unused stub reports itself.
+    lenient()
+        .when(langManager.getMessage(anyString(), any(Object[].class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    lenient().when(commandBlock.getName()).thenReturn("CommandBlock");
+    lenient().when(console.getName()).thenReturn("Console");
+    lenient().when(player.getName()).thenReturn("TestPlayer");
+    lenient().when(command.getName()).thenReturn("addspawn");
   }
 
   @Test
   void testAddSpawnSuccessfully() {
     Location loc = new Location(world, 100, 64, 100);
     when(player.getLocation()).thenReturn(loc);
-    when(player.hasPermission("mobspawner.addspawn")).thenReturn(true);
+    when(player.hasPermission("mobclash.addspawn")).thenReturn(true);
     when(spawnManager.getSpawnPoints("test-group")).thenReturn(List.of(loc));
 
     boolean result =
@@ -82,52 +71,68 @@ class AddSpawnCommandTest {
 
     assertTrue(result);
     verify(spawnManager).addSpawnPoint("test-group", loc);
-    verify(player).sendMessage("§aSpawn added!");
+    verify(player).sendMessage("addspawn-success");
   }
 
   @Test
   void testAddSpawnNoPermission() {
-    when(player.hasPermission("mobspawner.addspawn")).thenReturn(false);
+    when(player.hasPermission("mobclash.addspawn")).thenReturn(false);
 
     boolean result =
         addSpawnCommand.onCommand(player, command, "addspawn", new String[] {"test-group"});
 
     assertTrue(result);
-    verify(player).sendMessage("§cNo permission!");
+    verify(player).sendMessage("no-permission");
     verify(spawnManager, never()).addSpawnPoint(anyString(), any());
   }
 
   @Test
   void testAddSpawnMissingArguments() {
-    when(player.hasPermission("mobspawner.addspawn")).thenReturn(true);
+    when(player.hasPermission("mobclash.addspawn")).thenReturn(true);
 
     boolean result = addSpawnCommand.onCommand(player, command, "addspawn", new String[] {});
 
     assertTrue(result);
-    verify(player).sendMessage("§cUsage: /addspawn <group>");
+    verify(player).sendMessage("addspawn-usage");
     verify(spawnManager, never()).addSpawnPoint(anyString(), any());
   }
 
   @Test
-  void testCommandBlockBypassesPermission() {
-    // Command blocks can't be players, so this should fail with "players-only"
+  void testCommandBlockBypassesPermissionAndUsesItsOwnLocation() {
+    Location blockLoc = new Location(world, 10, 65, 20);
+    when(commandBlock.getBlock()).thenReturn(commandBlockBlock);
+    when(commandBlockBlock.getLocation()).thenReturn(blockLoc);
+    when(spawnManager.getSpawnPoints("test-group")).thenReturn(List.of(blockLoc));
+
     boolean result =
         addSpawnCommand.onCommand(commandBlock, command, "addspawn", new String[] {"test-group"});
 
     assertTrue(result);
-    verify(commandBlock).sendMessage("§cPlayers only!");
+    // No permission was ever granted to the command block; it ran anyway, at its own position.
+    verify(commandBlock, never()).hasPermission(anyString());
+    verify(spawnManager).addSpawnPoint("test-group", blockLoc);
+    verify(commandBlock).sendMessage("addspawn-success");
   }
 
   @Test
-  void testConsoleCannotExecute() {
-    // Console needs permission to get past the permission check
-    when(console.hasPermission("mobspawner.addspawn")).thenReturn(true);
-
+  void testConsoleHasNoLocationToAdd() {
     boolean result =
         addSpawnCommand.onCommand(console, command, "addspawn", new String[] {"test-group"});
 
     assertTrue(result);
-    verify(console).sendMessage("§cPlayers only!");
+    verify(console).sendMessage("no-location");
+    verify(spawnManager, never()).addSpawnPoint(anyString(), any());
+  }
+
+  @Test
+  void testDottedGroupNameIsRejected() {
+    when(player.hasPermission("mobclash.addspawn")).thenReturn(true);
+
+    boolean result =
+        addSpawnCommand.onCommand(player, command, "addspawn", new String[] {"wave.one"});
+
+    assertTrue(result);
+    verify(player).sendMessage("invalid-name");
     verify(spawnManager, never()).addSpawnPoint(anyString(), any());
   }
 }

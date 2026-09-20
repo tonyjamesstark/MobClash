@@ -1,18 +1,18 @@
 package io.tjs.mobclash.commands;
 
+import io.tjs.mobclash.MobClashPlugin;
 import io.tjs.mobclash.managers.LanguageManager;
 import io.tjs.mobclash.managers.SpawnManager;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
 
 public class SetChestCommand extends BaseCommand {
 
   public SetChestCommand(
-      JavaPlugin plugin, SpawnManager spawnManager, LanguageManager langManager) {
-    super(plugin, spawnManager, langManager, "mobspawner.setchest", true);
+      MobClashPlugin plugin, SpawnManager spawnManager, LanguageManager langManager) {
+    super(plugin, spawnManager, langManager, "mobclash.setchest", true);
   }
 
   @Override
@@ -24,6 +24,10 @@ public class SetChestCommand extends BaseCommand {
 
     String groupName = args[0];
     String waveName = args[1];
+
+    if (!validateName(sender, waveName)) {
+      return true;
+    }
 
     if (!spawnManager.hasGroup(groupName)) {
       sender.sendMessage(langManager.getMessage("group-not-exist", groupName));

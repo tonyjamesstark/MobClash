@@ -11,7 +11,7 @@ A powerful Minecraft Paper plugin for managing configurable mob spawn groups wit
 - 📦 **Per-Wave Mob Pools** - Each wave has its own chest of spawn eggs for complete control
 - 🎲 **Flexible Spawning** - Spawn at one random point or all points simultaneously
 - 👁️ **Visual Markers** - Display spawn points with colorful particle clouds
-- 🤖 **Command Block Support** - All commands work from command blocks without permission checks
+- 🤖 **Command Block Support** - Commands run from command blocks without permission checks; `/addspawn` and `/removespawn` act on the command block's own position
 - 🌍 **Multi-Language** - Fully translatable message system
 - 📊 **Configurable Logging** - Adjust verbosity from detailed to silent
 - ✅ **Fully Tested** - Comprehensive unit and integration test suite
@@ -44,8 +44,8 @@ mvn spotless:apply
 # Build with Maven (runs formatting check automatically)
 mvn clean package
 
-# The JAR will be in target/mobclash-1.0.0.jar
-cp target/mobclash-1.0.0.jar /path/to/server/plugins/
+# The JAR will be in target/mobclash-1.1.0.jar
+cp target/mobclash-1.1.0.jar /path/to/server/plugins/
 ```
 
 ## Quick Start
@@ -82,28 +82,39 @@ Create multiple chests with different mob compositions:
 
 | Command | Description | Permission |
 |---------|-------------|------------|
-| `/addspawn <group>` | Add your current location to a spawn group | `mobspawner.addspawn` |
-| `/removespawn <group>` | Remove the nearest spawn point from a group | `mobspawner.removespawn` |
-| `/listgroups` | List all spawn groups and their point counts | `mobspawner.listgroups` |
-| `/listspawns <group>` | List all spawn point coordinates for a group | `mobspawner.listspawns` |
-| `/showspawns <group>` | Display spawn points with visual markers (3 seconds) | `mobspawner.showspawns` |
-| `/setchest <group> <wave>` | Set the spawn egg chest for a group wave (look at chest) | `mobspawner.setchest` |
-| `/summonmobs <group> <wave> <random\|all> [amount]` | Summon mobs from the specified wave | `mobspawner.summon` |
-| `/kills [top\|reset\|resetall] [amount]` | View kill statistics and leaderboard | `mobspawner.kills` |
+| `/addspawn <group>` | Add your current location to a spawn group | `mobclash.addspawn` |
+| `/removespawn <group>` | Remove the nearest spawn point from a group | `mobclash.removespawn` |
+| `/listgroups` | List all spawn groups and their point counts | `mobclash.listgroups` |
+| `/listspawns <group>` | List all spawn point coordinates for a group | `mobclash.listspawns` |
+| `/showspawns <group>` | Display spawn points with visual markers (3 seconds) | `mobclash.showspawns` |
+| `/setchest <group> <wave>` | Set the spawn egg chest for a group wave (look at chest) | `mobclash.setchest` |
+| `/summonmobs <group> <wave> <random\|all> [amount]` | Summon mobs from the specified wave | `mobclash.summon` |
+| `/kills [top\|reset\|resetall] [amount]` | View kill statistics and leaderboard | `mobclash.kills` |
 
-**Note:** All commands work from command blocks without requiring permissions!
+**Note:** Commands run from command blocks and the console without requiring permissions. `/setchest` is the one exception to command-block use: it picks the chest you are looking at, so it needs a player.
 
 ## Permissions
 
 | Permission | Description | Default |
 |------------|-------------|---------|
-| `mobspawner.*` | Grants all permissions | op |
-| `mobspawner.addspawn` | Add spawn points | op |
-| `mobspawner.removespawn` | Remove spawn points | op |
-| `mobspawner.listgroups` | List spawn groups | op |
-| `mobspawner.showspawns` | Show spawn markers | op |
-| `mobspawner.setchest` | Set group chests | op |
-| `mobspawner.summon` | Summon mobs | op |
+| `mobclash.*` | Grants all permissions | op |
+| `mobclash.addspawn` | Add spawn points | op |
+| `mobclash.removespawn` | Remove spawn points | op |
+| `mobclash.listgroups` | List spawn groups | op |
+| `mobclash.listspawns` | List spawn point coordinates | op |
+| `mobclash.showspawns` | Show spawn markers | op |
+| `mobclash.setchest` | Set group chests | op |
+| `mobclash.summon` | Summon mobs | op |
+| `mobclash.kills` | View kill statistics and leaderboard | all |
+| `mobclash.kills.resetall` | Reset every player's kill count | op |
+
+The old `mobspawner.*` nodes are still declared as parents of the matching `mobclash.*` node, so
+an existing permissions setup keeps working unchanged. They default to `false` and are only there
+for that migration; new grants should use `mobclash.*`.
+
+Every command is also reachable under its plugin-qualified name, for example
+`/mobclash:addspawn`, which Bukkit registers automatically and which resolves even when another
+plugin claims the same short name.
 
 ## Configuration
 
@@ -112,7 +123,27 @@ Create multiple chests with different mob compositions:
 # Logging level for plugin operations
 # Options: INFO (verbose), WARNING (quiet), SEVERE (errors only), OFF (silent)
 logging-level: INFO
+
+# If true, mob drops go straight into the killer's inventory instead of onto the ground.
+# Anything that does not fit still drops normally.
+loot-to-inventory: false
+
+# Largest number of mobs a single /summonmobs may spawn. In "all" mode the total is
+# amount x number of spawn points. Set to 0 to disable the cap.
+max-mobs-per-summon: 500
 ```
+
+### spawns.yml and kills.yml
+
+The plugin writes what the commands create -- spawn groups, wave chests and kill counts -- to
+`spawns.yml` and `kills.yml`, not to `config.yml`. Those two are machine-written: edit them only
+with the server stopped, since the plugin rewrites each from memory whenever it saves.
+
+`config.yml` is yours. Nothing the plugin writes lands there, so an edit on a running server is
+not overwritten by the next `/addspawn`.
+
+Upgrading from a version that kept everything in `config.yml` moves the data across on first
+start, once, and logs that it did.
 
 ### language.yml
 All messages are customizable! Edit `language.yml` to translate or customize messages:
@@ -224,7 +255,9 @@ Use `&` for color codes (e.g., `&a` = green, `&c` = red, `&e` = yellow).
 ## Advanced Usage
 
 ### Command Blocks
-All commands work perfectly in command blocks without permission issues:
+Commands run in command blocks without permission issues. `/addspawn` and `/removespawn` use the
+command block's own position, so a command block can build a group where it stands. `/setchest`
+still needs a player, since it targets the chest you are looking at:
 ```
 Command Block 1: /summonmobs arena wave1 random 10
 [Wait 60s]
@@ -257,17 +290,18 @@ Each wave uses the same spawn points but different mob compositions!
 - `MobClashPlugin.java` (main class)
 - `SpawnManager.java` 
 - `LanguageManager.java`
-- All command files use `com.example.mobclash.commands`
-- All manager files use `com.example.mobclash.managers`
+- All command files use `io.tjs.mobclash.commands`
+- All manager files use `io.tjs.mobclash.managers`
 
 ### Directory Structure:
 ```
 mobclash/
-├── src/main/java/com/example/mobclash/
+├── src/main/java/io/tjs/mobclash/
 │   ├── MobClashPlugin.java
 │   ├── commands/
+│   ├── listeners/
 │   └── managers/
-└── src/test/java/com/example/mobclash/
+└── src/test/java/io/tjs/mobclash/
 ```
 
 ### Building
@@ -312,7 +346,7 @@ The plugin includes comprehensive tests:
 - Check console for error messages
 
 **Permission denied?**
-- Grant the appropriate `mobspawner.*` permission
+- Grant the appropriate `mobclash.*` permission
 - Or use command blocks which bypass permissions
 
 **Configuration not loading?**

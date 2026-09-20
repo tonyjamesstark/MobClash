@@ -13,5 +13,11 @@ logging-level: INFO
 # If false, mobs drop loot normally on the ground
 loot-to-inventory: false
 
-# Note: Spawn groups, chest locations, and kill tracking data
-# are managed through commands and will be automatically saved below
+# Largest number of mobs a single /summonmobs may spawn.
+# In "all" mode the total is amount x number of spawn points, which is what lands in one tick.
+# Set to 0 to disable the cap.
+max-mobs-per-summon: 500
+
+# This file holds settings only. Spawn groups and chest locations live in spawns.yml, and kill
+# counts in kills.yml, both written by the plugin as commands run. Nothing the plugin writes
+# lands here, so editing this file on a running server is safe -- reload to pick it up.

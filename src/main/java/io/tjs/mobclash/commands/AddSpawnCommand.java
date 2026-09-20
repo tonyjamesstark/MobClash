@@ -1,16 +1,16 @@
 package io.tjs.mobclash.commands;
 
+import io.tjs.mobclash.MobClashPlugin;
 import io.tjs.mobclash.managers.LanguageManager;
 import io.tjs.mobclash.managers.SpawnManager;
+import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
 
 public class AddSpawnCommand extends BaseCommand {
 
   public AddSpawnCommand(
-      JavaPlugin plugin, SpawnManager spawnManager, LanguageManager langManager) {
-    super(plugin, spawnManager, langManager, "mobspawner.addspawn", true);
+      MobClashPlugin plugin, SpawnManager spawnManager, LanguageManager langManager) {
+    super(plugin, spawnManager, langManager, "mobclash.addspawn", false);
   }
 
   @Override
@@ -20,10 +20,19 @@ public class AddSpawnCommand extends BaseCommand {
       return true;
     }
 
-    Player player = getPlayer(sender);
     String groupName = args[0];
+    if (!validateName(sender, groupName)) {
+      return true;
+    }
 
-    spawnManager.addSpawnPoint(groupName, player.getLocation());
+    // A command block adds a point at its own position; a player at theirs.
+    Location location = senderLocation(sender);
+    if (location == null) {
+      sender.sendMessage(langManager.getMessage("no-location"));
+      return true;
+    }
+
+    spawnManager.addSpawnPoint(groupName, location);
 
     sender.sendMessage(
         langManager.getMessage(

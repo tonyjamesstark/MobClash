@@ -3,13 +3,13 @@ package io.tjs.mobclash.managers;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import io.tjs.mobclash.DataFile;
 import io.tjs.mobclash.MobClashPlugin;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.logging.Level;
 import org.bukkit.NamespacedKey;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Zombie;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -17,26 +17,22 @@ import org.bukkit.persistence.PersistentDataType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class MobTrackerTest {
 
-  @Mock(lenient = true)
-  private MobClashPlugin plugin;
+  @Mock private MobClashPlugin plugin;
 
-  @Mock(lenient = true)
-  private FileConfiguration config;
+  @Mock private Player player;
 
-  @Mock(lenient = true)
-  private Player player;
+  @Mock private Zombie zombie;
 
-  @Mock(lenient = true)
-  private Zombie zombie;
+  @Mock private PersistentDataContainer pdc;
 
-  @Mock(lenient = true)
-  private PersistentDataContainer pdc;
+  @TempDir Path dataFolder;
 
   private MobTracker mobTracker;
   private UUID playerUuid;
@@ -45,18 +41,17 @@ class MobTrackerTest {
   void setUp() {
     playerUuid = UUID.randomUUID();
 
-    when(plugin.getName()).thenReturn("MobClash");
-    when(plugin.getConfig()).thenReturn(config);
-    when(config.contains(anyString())).thenReturn(false);
-    doNothing().when(plugin).log(any(Level.class), anyString());
-    doNothing().when(plugin).saveConfig();
+    // Shared fixture, lenient because no single test uses all of it: the kill tests never touch a
+    // mob's data container and the mob tests never name a player. Stubs inside a test stay strict.
+    lenient().when(plugin.getName()).thenReturn("MobClash");
+    lenient().when(plugin.getDataFolder()).thenReturn(dataFolder.toFile());
 
-    when(player.getUniqueId()).thenReturn(playerUuid);
-    when(player.getName()).thenReturn("TestPlayer");
+    lenient().when(player.getUniqueId()).thenReturn(playerUuid);
+    lenient().when(player.getName()).thenReturn("TestPlayer");
 
-    when(zombie.getPersistentDataContainer()).thenReturn(pdc);
+    lenient().when(zombie.getPersistentDataContainer()).thenReturn(pdc);
 
-    mobTracker = new MobTracker(plugin);
+    mobTracker = new MobTracker(plugin, new DataFile(plugin, "kills.yml"));
   }
 
   @Test

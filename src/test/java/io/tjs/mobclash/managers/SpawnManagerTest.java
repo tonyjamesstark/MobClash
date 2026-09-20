@@ -3,40 +3,35 @@ package io.tjs.mobclash.managers;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import io.tjs.mobclash.DataFile;
 import io.tjs.mobclash.MobClashPlugin;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class SpawnManagerTest {
 
-  @Mock(lenient = true)
-  private MobClashPlugin plugin;
+  @Mock private MobClashPlugin plugin;
 
-  @Mock(lenient = true)
-  private FileConfiguration config;
+  @Mock private World world;
 
-  @Mock(lenient = true)
-  private World world;
+  @TempDir Path dataFolder;
 
   private SpawnManager spawnManager;
 
   @BeforeEach
   void setUp() {
-    when(plugin.getConfig()).thenReturn(config);
-    when(config.contains(anyString())).thenReturn(false);
-    doNothing().when(plugin).log(any(Level.class), anyString());
-    doNothing().when(plugin).saveConfig();
-    spawnManager = new SpawnManager(plugin);
+    when(plugin.getDataFolder()).thenReturn(dataFolder.toFile());
+    spawnManager = new SpawnManager(plugin, new DataFile(plugin, "spawns.yml"));
   }
 
   @Test

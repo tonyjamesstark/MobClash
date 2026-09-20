@@ -1,5 +1,6 @@
 package io.tjs.mobclash.commands;
 
+import io.tjs.mobclash.MobClashPlugin;
 import io.tjs.mobclash.managers.LanguageManager;
 import io.tjs.mobclash.managers.MobTracker;
 import io.tjs.mobclash.managers.SpawnManager;
@@ -10,18 +11,17 @@ import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
 
 public class KillsCommand extends BaseCommand {
 
   private final MobTracker mobTracker;
 
   public KillsCommand(
-      JavaPlugin plugin,
+      MobClashPlugin plugin,
       SpawnManager spawnManager,
       LanguageManager langManager,
       MobTracker mobTracker) {
-    super(plugin, spawnManager, langManager, "mobspawner.kills", false);
+    super(plugin, spawnManager, langManager, "mobclash.kills", false);
     this.mobTracker = mobTracker;
   }
 
@@ -48,7 +48,9 @@ public class KillsCommand extends BaseCommand {
       if (args.length > 1) {
         try {
           limit = Integer.parseInt(args[1]);
-          limit = Math.min(limit, 50); // Cap at 50
+          // Clamp both ends: Stream.limit throws on a negative value, and 0 would report an
+          // empty leaderboard as "no kills recorded".
+          limit = Math.max(1, Math.min(limit, 50));
         } catch (NumberFormatException e) {
           sender.sendMessage(langManager.getMessage("invalid-number"));
           return true;
@@ -62,7 +64,7 @@ public class KillsCommand extends BaseCommand {
         return true;
       }
 
-      sender.sendMessage(langManager.getMessage("kills-top-header", limit));
+      sender.sendMessage(langManager.getMessage("kills-top-header", topKills.size()));
       int rank = 1;
       for (Map.Entry<UUID, Integer> entry : topKills) {
         OfflinePlayer player = Bukkit.getOfflinePlayer(entry.getKey());
@@ -91,7 +93,7 @@ public class KillsCommand extends BaseCommand {
 
     // /kills resetall - reset all kills (requires permission)
     if (subcommand.equals("resetall")) {
-      if (!sender.hasPermission("mobspawner.kills.resetall")) {
+      if (!hasPermissionOrBypass(sender, "mobclash.kills.resetall")) {
         sender.sendMessage(langManager.getMessage("no-permission"));
         return true;
       }

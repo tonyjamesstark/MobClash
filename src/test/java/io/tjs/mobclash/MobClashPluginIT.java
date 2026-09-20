@@ -13,13 +13,11 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.logging.Level;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
 import org.bukkit.command.Command;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,29 +31,19 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class MobClashPluginIT {
 
-  @Mock(lenient = true)
-  private MobClashPlugin plugin;
+  @Mock private MobClashPlugin plugin;
 
-  @Mock(lenient = true)
-  private FileConfiguration config;
+  @Mock private Player player;
 
-  @Mock(lenient = true)
-  private Player player;
+  @Mock private World world;
 
-  @Mock(lenient = true)
-  private World world;
+  @Mock private Command command;
 
-  @Mock(lenient = true)
-  private Command command;
+  @Mock private Block block;
 
-  @Mock(lenient = true)
-  private Block block;
+  @Mock private Chest chest;
 
-  @Mock(lenient = true)
-  private Chest chest;
-
-  @Mock(lenient = true)
-  private Inventory inventory;
+  @Mock private Inventory inventory;
 
   @TempDir Path tempDir;
 
@@ -68,12 +56,8 @@ class MobClashPluginIT {
     // Setup plugin mock
     File dataFolder = tempDir.toFile();
     when(plugin.getDataFolder()).thenReturn(dataFolder);
-    when(plugin.getConfig()).thenReturn(config);
-    when(config.contains(anyString())).thenReturn(false);
-
-    // Mock the log method to prevent NPE
-    doNothing().when(plugin).log(any(Level.class), anyString());
-    doNothing().when(plugin).saveConfig();
+    // MobTracker builds a NamespacedKey, which dereferences plugin.getName().
+    when(plugin.getName()).thenReturn("MobClash");
 
     // Create test language.yml
     File langFile = new File(dataFolder, "language.yml");
@@ -82,11 +66,12 @@ class MobClashPluginIT {
     }
 
     // Create managers
-    spawnManager = new SpawnManager(plugin);
+    spawnManager = new SpawnManager(plugin, new DataFile(plugin, "spawns.yml"));
     languageManager = new LanguageManager(plugin);
-    mobTracker = new MobTracker(plugin);
+    mobTracker = new MobTracker(plugin, new DataFile(plugin, "kills.yml"));
 
-    when(plugin.getMobTracker()).thenReturn(mobTracker);
+    // Lenient: only the summon workflows reach the tracker.
+    lenient().when(plugin.getMobTracker()).thenReturn(mobTracker);
   }
 
   @Test
