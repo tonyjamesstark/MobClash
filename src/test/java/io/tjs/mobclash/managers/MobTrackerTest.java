@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -43,7 +44,6 @@ class MobTrackerTest {
 
     // Shared fixture, lenient because no single test uses all of it: the kill tests never touch a
     // mob's data container and the mob tests never name a player. Stubs inside a test stay strict.
-    lenient().when(plugin.getName()).thenReturn("MobClash");
     lenient().when(plugin.getDataFolder()).thenReturn(dataFolder.toFile());
 
     lenient().when(player.getUniqueId()).thenReturn(playerUuid);
@@ -52,6 +52,19 @@ class MobTrackerTest {
     lenient().when(zombie.getPersistentDataContainer()).thenReturn(pdc);
 
     mobTracker = new MobTracker(plugin, new DataFile(plugin, "kills.yml"));
+  }
+
+  @Test
+  void theTagKeyIsPinnedSoOlderMobsStayRecognised() {
+    ArgumentCaptor<NamespacedKey> key = ArgumentCaptor.forClass(NamespacedKey.class);
+    mobTracker.tagMob(zombie, "arena", "wave1");
+    verify(pdc).set(key.capture(), eq(PersistentDataType.STRING), eq("arena:wave1"));
+
+    // Exactly what NamespacedKey(plugin, "mobclash_spawned") produced on 1.20, where the
+    // namespace came from getName(). 1.21 takes it from namespace() instead, so this is written
+    // out rather than derived. Changing either half orphans every mob tagged by an older build.
+    assertEquals("mobclash", key.getValue().getNamespace());
+    assertEquals("mobclash_spawned", key.getValue().getKey());
   }
 
   @Test

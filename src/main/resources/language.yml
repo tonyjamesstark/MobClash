@@ -58,3 +58,12 @@ kills-top-header: "&a=== Top {0} MobClash Killers ==="
 kills-top-entry: "&e#{0} &7{1} &f- &a{2} kills"
 kills-reset: "&aYour kills have been reset! (was {0})"
 kills-resetall: "&aAll player kills have been reset!"
+
+# Kill Board Command
+killboard-usage: "&cUsage: /killboard [world <on|off> | alloff] &7- plain /killboard toggles your own"
+killboard-title: "&6MobClash Kills"
+killboard-on: "&aKill board on."
+killboard-off: "&aKill board off."
+killboard-world-on: "&aKill board turned on for {0} player(s) in {1}."
+killboard-world-off: "&aKill board turned off for {0} player(s) in {1}."
+killboard-alloff: "&aKill board turned off for {0} player(s)."

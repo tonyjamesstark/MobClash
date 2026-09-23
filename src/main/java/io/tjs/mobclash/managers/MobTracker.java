@@ -21,7 +21,11 @@ public class MobTracker {
   public MobTracker(MobClashPlugin plugin, DataFile storage) {
     this.plugin = plugin;
     this.storage = storage;
-    this.mobclashKey = new NamespacedKey(plugin, "mobclash_spawned");
+    // Namespace written out rather than taken from the plugin. NamespacedKey(Plugin, String)
+    // derived it from getName() on 1.20 and from namespace() on 1.21; if those ever differ,
+    // every mob tagged by an older build stops being recognised and silently drops out of
+    // kill tracking. "mobclash" is what 1.20 produced, so pinning it keeps old tags valid.
+    this.mobclashKey = new NamespacedKey("mobclash", "mobclash_spawned");
     this.playerKills = new HashMap<>();
     loadKillData();
   }

@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -87,6 +88,17 @@ class SummonMobsCommandTest {
         (org.bukkit.command.CommandSender) sender, command, "summonmobs", args);
   }
 
+  /**
+   * A stack of one material. Constructing a real ItemStack resolves its ItemType through Registry,
+   * which needs a running server as of 1.21; the command reads only type and amount.
+   */
+  private ItemStack itemOf(Material material, int amount) {
+    ItemStack item = mock(ItemStack.class);
+    when(item.getType()).thenReturn(material);
+    lenient().when(item.getAmount()).thenReturn(amount);
+    return item;
+  }
+
   private void givenGroup(String group, String wave, List<Location> points) {
     when(spawnManager.hasGroup(group)).thenReturn(true);
     when(spawnManager.getGroupChest(group, wave)).thenReturn(chestLoc);
@@ -118,16 +130,19 @@ class SummonMobsCommandTest {
   }
 
   @Test
-  void randomModeSpawnsTheRequestedCountAtOnePoint() {
-    givenGroup("test-group", "wave1", List.of(spawnLoc));
+  void randomModeSpreadsTheRequestedCountOverThePoints() {
+    Location spawnLoc2 = new Location(world, 200, 64, 200);
+    givenGroup("test-group", "wave1", List.of(spawnLoc, spawnLoc2));
     givenCapOf(500);
-    givenChestHolding(new ItemStack(Material.ZOMBIE_SPAWN_EGG, 5));
+    givenChestHolding(itemOf(Material.ZOMBIE_SPAWN_EGG, 5));
     givenSpawnOf(EntityType.ZOMBIE, true);
 
-    assertTrue(run(player, "test-group", "wave1", "random", "3"));
+    assertTrue(run(player, "test-group", "wave1", "random", "20"));
 
-    verify(world, times(3)).spawnEntity(any(Location.class), eq(EntityType.ZOMBIE));
-    verify(mobTracker, times(3)).tagMob(any(), eq("test-group"), eq("wave1"));
+    verify(world, times(20)).spawnEntity(any(Location.class), eq(EntityType.ZOMBIE));
+    verify(world, atLeastOnce()).spawnEntity(eq(spawnLoc), eq(EntityType.ZOMBIE));
+    verify(world, atLeastOnce()).spawnEntity(eq(spawnLoc2), eq(EntityType.ZOMBIE));
+    verify(mobTracker, times(20)).tagMob(any(), eq("test-group"), eq("wave1"));
     verify(player).sendMessage("summonmobs-success");
   }
 
@@ -136,7 +151,7 @@ class SummonMobsCommandTest {
     Location spawnLoc2 = new Location(world, 200, 64, 200);
     givenGroup("test-group", "wave1", List.of(spawnLoc, spawnLoc2));
     givenCapOf(500);
-    givenChestHolding(new ItemStack(Material.ZOMBIE_SPAWN_EGG, 5));
+    givenChestHolding(itemOf(Material.ZOMBIE_SPAWN_EGG, 5));
     givenSpawnOf(EntityType.ZOMBIE, true);
 
     assertTrue(run(player, "test-group", "wave1", "all", "2"));
@@ -149,7 +164,7 @@ class SummonMobsCommandTest {
   void aCommandBlockMaySummonWithoutPermission() {
     givenGroup("test-group", "wave1", List.of(spawnLoc));
     givenCapOf(500);
-    givenChestHolding(new ItemStack(Material.ZOMBIE_SPAWN_EGG, 1));
+    givenChestHolding(itemOf(Material.ZOMBIE_SPAWN_EGG, 1));
     givenSpawnOf(EntityType.ZOMBIE, true);
 
     assertTrue(run(commandBlock, "test-group", "wave1", "random", "1"));
@@ -160,24 +175,24 @@ class SummonMobsCommandTest {
 
   @Test
   void anEggWhoseEnumNameDiffersFromItsEntityStillMaps() {
-    // MOOSHROOM_SPAWN_EGG's entity constant is MUSHROOM_COW. Matching enum names dropped this egg
-    // silently; the key-based map does not.
+    // This egg's entity constant was MUSHROOM_COW on 1.20 and is MOOSHROOM on 1.21. Matching
+    // enum names dropped it silently on 1.20 and would break again at the rename; the key,
+    // minecraft:mooshroom, is the same on both.
     givenGroup("test-group", "wave1", List.of(spawnLoc));
     givenCapOf(500);
-    givenChestHolding(new ItemStack(Material.MOOSHROOM_SPAWN_EGG, 1));
-    givenSpawnOf(EntityType.MUSHROOM_COW, true);
+    givenChestHolding(itemOf(Material.MOOSHROOM_SPAWN_EGG, 1));
+    givenSpawnOf(EntityType.MOOSHROOM, true);
 
     assertTrue(run(player, "test-group", "wave1", "random", "1"));
 
-    verify(world).spawnEntity(any(Location.class), eq(EntityType.MUSHROOM_COW));
+    verify(world).spawnEntity(any(Location.class), eq(EntityType.MOOSHROOM));
   }
 
   @Test
   void nonEggContentsAndEmptySlotsAreIgnored() {
     givenGroup("test-group", "wave1", List.of(spawnLoc));
     givenCapOf(500);
-    givenChestHolding(
-        null, new ItemStack(Material.DIAMOND, 64), new ItemStack(Material.ZOMBIE_SPAWN_EGG, 1));
+    givenChestHolding(null, itemOf(Material.DIAMOND, 64), itemOf(Material.ZOMBIE_SPAWN_EGG, 1));
     givenSpawnOf(EntityType.ZOMBIE, true);
 
     assertTrue(run(player, "test-group", "wave1", "random", "1"));
@@ -189,7 +204,7 @@ class SummonMobsCommandTest {
   void aRefusedSpawnIsNotCountedOrTagged() {
     givenGroup("test-group", "wave1", List.of(spawnLoc));
     givenCapOf(500);
-    givenChestHolding(new ItemStack(Material.ZOMBIE_SPAWN_EGG, 5));
+    givenChestHolding(itemOf(Material.ZOMBIE_SPAWN_EGG, 5));
     // A protection plugin cancelled CreatureSpawnEvent: Bukkit still returns the entity object.
     givenSpawnOf(EntityType.ZOMBIE, false);
 
@@ -283,7 +298,7 @@ class SummonMobsCommandTest {
   void aChestWithNoSpawnEggsIsReported() {
     givenGroup("test-group", "wave1", List.of(spawnLoc));
     givenCapOf(500);
-    givenChestHolding(new ItemStack(Material.DIAMOND, 1));
+    givenChestHolding(itemOf(Material.DIAMOND, 1));
 
     assertTrue(run(player, "test-group", "wave1", "random"));
 

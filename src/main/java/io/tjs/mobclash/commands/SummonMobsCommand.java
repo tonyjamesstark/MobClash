@@ -140,8 +140,10 @@ public class SummonMobsCommand extends BaseCommand {
    * The entity an egg spawns, resolved through the namespaced key both sides share.
    *
    * <p>Matching the enum names instead (MOOSHROOM_SPAWN_EGG -> EntityType.MOOSHROOM) is a
-   * coincidence Bukkit does not guarantee, and it already fails: the constants for the mooshroom
-   * and snow golem eggs are MUSHROOM_COW and SNOWMAN. Keys are stable across those renames.
+   * coincidence Bukkit does not guarantee. On 1.20 those two constants were MUSHROOM_COW and
+   * SNOWMAN, so name matching dropped both eggs in silence; 1.21 renamed them to MOOSHROOM and
+   * SNOW_GOLEM, which would have broken a plugin that had adapted to the old names. The key,
+   * minecraft:mooshroom, did not move either time.
    */
   private static final Map<String, EntityType> ENTITY_TYPES_BY_KEY = entityTypesByKey();
 
@@ -208,40 +210,36 @@ public class SummonMobsCommand extends BaseCommand {
       String waveName) {
     MobTracker mobTracker = plugin.getMobTracker();
 
-    // "random" is one target, "all" is every target; the spawn loop itself is identical.
-    List<Location> targets;
-    if (mode.equals("random")) {
-      Location spawnLoc = locations.get(spawnManager.getRandom().nextInt(locations.size()));
-      targets = List.of(spawnLoc);
-      plugin.log(
-          Level.INFO,
-          "Spawning at random location: "
-              + String.format(
-                  "(%.1f, %.1f, %.1f)", spawnLoc.getX(), spawnLoc.getY(), spawnLoc.getZ()));
-    } else {
-      targets = locations;
-      plugin.log(Level.INFO, "Spawning at all " + locations.size() + " locations");
-    }
+    // "random" draws a point per mob; "all" spawns the full amount at every point.
+    boolean random = mode.equals("random");
+    int total = random ? amount : amount * locations.size();
+    plugin.log(
+        Level.INFO,
+        random
+            ? "Spawning " + amount + " mobs across " + locations.size() + " random locations"
+            : "Spawning at all " + locations.size() + " locations");
 
     int spawned = 0;
     int refused = 0;
-    for (Location spawnLoc : targets) {
-      for (int i = 0; i < amount; i++) {
-        EntityType entityType = spawnEggs.get(spawnManager.getRandom().nextInt(spawnEggs.size()));
-        Entity entity = spawnLoc.getWorld().spawnEntity(spawnLoc, entityType);
+    for (int n = 0; n < total; n++) {
+      Location spawnLoc =
+          random
+              ? locations.get(spawnManager.getRandom().nextInt(locations.size()))
+              : locations.get(n / amount);
+      EntityType entityType = spawnEggs.get(spawnManager.getRandom().nextInt(spawnEggs.size()));
+      Entity entity = spawnLoc.getWorld().spawnEntity(spawnLoc, entityType);
 
-        // A cancelled CreatureSpawnEvent (region protection, anti-lag plugins) still hands back
-        // the entity object, so counting unconditionally reports mobs that do not exist.
-        if (entity == null || !entity.isValid()) {
-          refused++;
-          continue;
-        }
-
-        if (entity instanceof LivingEntity living) {
-          mobTracker.tagMob(living, groupName, waveName);
-        }
-        spawned++;
+      // A cancelled CreatureSpawnEvent (region protection, anti-lag plugins) still hands back
+      // the entity object, so counting unconditionally reports mobs that do not exist.
+      if (entity == null || !entity.isValid()) {
+        refused++;
+        continue;
       }
+
+      if (entity instanceof LivingEntity living) {
+        mobTracker.tagMob(living, groupName, waveName);
+      }
+      spawned++;
     }
 
     if (refused > 0) {

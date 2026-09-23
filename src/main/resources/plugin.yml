@@ -1,7 +1,7 @@
 name: MobClash
 version: ${project.version}
 main: io.tjs.mobclash.MobClashPlugin
-api-version: 1.20
+api-version: 1.21
 author: tjs
 description: Advanced mob spawning system with configurable spawn groups
 
@@ -31,9 +31,9 @@ commands:
     usage: /<command> <group> <wave>
 
   summonmobs:
-    description: Summon a wave's mobs at one spawn point or at all of them
+    description: Summon a wave's mobs scattered over random spawn points or at all of them
     usage: |-
-      /<command> <group> <wave> random [amount] - at one random spawn point
+      /<command> <group> <wave> random [amount] - each mob at a random spawn point
       /<command> <group> <wave> all [amount] - at every spawn point
       amount is 1-100 per point, default 1, and the total is capped by max-mobs-per-summon
 
@@ -44,6 +44,13 @@ commands:
       /<command> top [amount] - leaderboard, default 10, maximum 50
       /<command> reset - clear your own kills
       /<command> resetall - clear every player's kills
+
+  killboard:
+    description: Show the kill leaderboard in the sidebar, for yourself or a whole world
+    usage: |-
+      /<command> - toggle it for yourself
+      /<command> world <on|off> - for everyone in your world
+      /<command> alloff - off for everyone in every world
 
 permissions:
   mobclash.*:
@@ -59,6 +66,8 @@ permissions:
       mobclash.summon: true
       mobclash.kills: true
       mobclash.kills.resetall: true
+      mobclash.killboard: true
+      mobclash.killboard.admin: true
 
   mobclash.addspawn:
     description: Allows adding spawn points
@@ -94,6 +103,14 @@ permissions:
 
   mobclash.kills.resetall:
     description: Allows resetting all player kills
+    default: op
+
+  mobclash.killboard:
+    description: Allows toggling the kill leaderboard sidebar for yourself
+    default: true
+
+  mobclash.killboard.admin:
+    description: Allows switching the kill leaderboard sidebar for a world, or off for everyone
     default: op
 
   # Deprecated mobspawner.* namespace, from before the plugin was renamed. Kept as parents
@@ -158,3 +175,15 @@ permissions:
     default: false
     children:
       mobclash.kills.resetall: true
+
+  mobspawner.killboard:
+    description: Deprecated alias for mobclash.killboard
+    default: false
+    children:
+      mobclash.killboard: true
+
+  mobspawner.killboard.admin:
+    description: Deprecated alias for mobclash.killboard.admin
+    default: false
+    children:
+      mobclash.killboard.admin: true

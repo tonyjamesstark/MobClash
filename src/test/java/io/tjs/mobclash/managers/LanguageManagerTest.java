@@ -28,6 +28,8 @@ class LanguageManagerTest {
   void setUp() throws IOException {
     File dataFolder = tempDir.toFile();
     when(plugin.getDataFolder()).thenReturn(dataFolder);
+    when(plugin.getResource("language.yml"))
+        .thenAnswer(invocation -> getClass().getResourceAsStream("/language.yml"));
 
     // Create a test language.yml file
     File langFile = new File(dataFolder, "language.yml");
@@ -35,6 +37,7 @@ class LanguageManagerTest {
       writer.write("test-message: \"&aTest message\"\n");
       writer.write("test-with-placeholder: \"Hello {0}!\"\n");
       writer.write("test-multiple-placeholders: \"{0} has {1} kills\"\n");
+      writer.write("no-permission: \"Locally edited\"\n");
     }
 
     languageManager = new LanguageManager(plugin);
@@ -63,6 +66,17 @@ class LanguageManagerTest {
     String message = languageManager.getMessage("non-existent-key");
     assertTrue(message.contains("Missing translation"));
     assertTrue(message.contains("non-existent-key"));
+  }
+
+  @Test
+  void aKeyMissingFromAnOlderCopyFallsBackToTheBundledOne() {
+    // An upgraded server keeps the language.yml its first version wrote.
+    assertEquals("§6MobClash Kills", languageManager.getMessage("killboard-title"));
+  }
+
+  @Test
+  void aLocallyEditedMessageWinsOverTheBundledOne() {
+    assertEquals("Locally edited", languageManager.getMessage("no-permission"));
   }
 
   @Test

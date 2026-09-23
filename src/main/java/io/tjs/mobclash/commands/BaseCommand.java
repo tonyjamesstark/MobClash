@@ -69,6 +69,11 @@ public abstract class BaseCommand implements CommandExecutor {
     return execute(sender, args);
   }
 
+  /** The node that gates this command, for registration to hand to Bukkit. */
+  public String getPermission() {
+    return permission;
+  }
+
   /**
    * Senders exempt from permission checks. Console is listed explicitly rather than relying on it
    * being an operator, which is the undocumented mechanism that made it work before.

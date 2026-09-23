@@ -56,8 +56,8 @@ class MobClashPluginIT {
     // Setup plugin mock
     File dataFolder = tempDir.toFile();
     when(plugin.getDataFolder()).thenReturn(dataFolder);
-    // MobTracker builds a NamespacedKey, which dereferences plugin.getName().
-    when(plugin.getName()).thenReturn("MobClash");
+    when(plugin.getResource("language.yml"))
+        .thenAnswer(invocation -> getClass().getResourceAsStream("/language.yml"));
 
     // Create test language.yml
     File langFile = new File(dataFolder, "language.yml");

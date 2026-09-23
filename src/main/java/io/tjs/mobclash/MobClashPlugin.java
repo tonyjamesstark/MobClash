@@ -2,13 +2,13 @@ package io.tjs.mobclash;
 
 import io.tjs.mobclash.commands.*;
 import io.tjs.mobclash.listeners.MobDeathListener;
+import io.tjs.mobclash.managers.KillBoard;
 import io.tjs.mobclash.managers.LanguageManager;
 import io.tjs.mobclash.managers.MobTracker;
 import io.tjs.mobclash.managers.SpawnManager;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Level;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -17,6 +17,7 @@ public class MobClashPlugin extends JavaPlugin {
   private SpawnManager spawnManager;
   private LanguageManager languageManager;
   private MobTracker mobTracker;
+  private KillBoard killBoard;
   private Level loggingLevel;
 
   @Override
@@ -39,6 +40,9 @@ public class MobClashPlugin extends JavaPlugin {
     mobTracker = new MobTracker(this, kills);
     log(Level.INFO, "Mob tracker initialized");
 
+    killBoard =
+        new KillBoard(this, mobTracker, languageManager, getServer().getScoreboardManager());
+
     registerCommands();
     log(Level.INFO, "Commands registered");
 
@@ -51,6 +55,11 @@ public class MobClashPlugin extends JavaPlugin {
   @Override
   public void onDisable() {
     log(Level.INFO, "Disabling MobClash plugin...");
+
+    // A reload would otherwise leave viewers holding a scoreboard nothing updates any more.
+    if (killBoard != null) {
+      killBoard.hideAll();
+    }
 
     // Each save is isolated: a failure in one must not discard the other's data, and Bukkit
     // swallows anything thrown out of onDisable.
@@ -104,7 +113,7 @@ public class MobClashPlugin extends JavaPlugin {
   }
 
   private void registerCommands() {
-    Map<String, CommandExecutor> executors = new LinkedHashMap<>();
+    Map<String, BaseCommand> executors = new LinkedHashMap<>();
     executors.put("addspawn", new AddSpawnCommand(this, spawnManager, languageManager));
     executors.put("removespawn", new RemoveSpawnCommand(this, spawnManager, languageManager));
     executors.put("listgroups", new ListGroupsCommand(this, spawnManager, languageManager));
@@ -112,7 +121,10 @@ public class MobClashPlugin extends JavaPlugin {
     executors.put("showspawns", new ShowSpawnsCommand(this, spawnManager, languageManager));
     executors.put("setchest", new SetChestCommand(this, spawnManager, languageManager));
     executors.put("summonmobs", new SummonMobsCommand(this, spawnManager, languageManager));
-    executors.put("kills", new KillsCommand(this, spawnManager, languageManager, mobTracker));
+    executors.put(
+        "kills", new KillsCommand(this, spawnManager, languageManager, mobTracker, killBoard));
+    executors.put(
+        "killboard", new KillBoardCommand(this, spawnManager, languageManager, killBoard));
 
     executors.forEach(
         (name, executor) -> {
@@ -125,11 +137,17 @@ public class MobClashPlugin extends JavaPlugin {
           }
           log(Level.INFO, "Registering command: " + name);
           command.setExecutor(executor);
+          // Set here rather than in plugin.yml so it cannot drift from the node the executor
+          // checks. Bukkit then hides the command from anyone who lacks it.
+          command.setPermission(executor.getPermission());
         });
   }
 
   private void registerListeners() {
-    getServer().getPluginManager().registerEvents(new MobDeathListener(this, mobTracker), this);
+    getServer()
+        .getPluginManager()
+        .registerEvents(new MobDeathListener(this, mobTracker, killBoard), this);
+    getServer().getPluginManager().registerEvents(killBoard, this);
   }
 
   public SpawnManager getSpawnManager() {

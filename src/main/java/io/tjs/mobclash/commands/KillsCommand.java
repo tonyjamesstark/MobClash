@@ -1,6 +1,7 @@
 package io.tjs.mobclash.commands;
 
 import io.tjs.mobclash.MobClashPlugin;
+import io.tjs.mobclash.managers.KillBoard;
 import io.tjs.mobclash.managers.LanguageManager;
 import io.tjs.mobclash.managers.MobTracker;
 import io.tjs.mobclash.managers.SpawnManager;
@@ -15,14 +16,17 @@ import org.bukkit.entity.Player;
 public class KillsCommand extends BaseCommand {
 
   private final MobTracker mobTracker;
+  private final KillBoard killBoard;
 
   public KillsCommand(
       MobClashPlugin plugin,
       SpawnManager spawnManager,
       LanguageManager langManager,
-      MobTracker mobTracker) {
+      MobTracker mobTracker,
+      KillBoard killBoard) {
     super(plugin, spawnManager, langManager, "mobclash.kills", false);
     this.mobTracker = mobTracker;
+    this.killBoard = killBoard;
   }
 
   @Override
@@ -87,6 +91,7 @@ public class KillsCommand extends BaseCommand {
       int oldKills = mobTracker.getKills(player);
       mobTracker.resetKills(player);
       mobTracker.saveKillData();
+      killBoard.refresh();
       sender.sendMessage(langManager.getMessage("kills-reset", oldKills));
       return true;
     }
@@ -100,6 +105,7 @@ public class KillsCommand extends BaseCommand {
 
       mobTracker.resetAllKills();
       mobTracker.saveKillData();
+      killBoard.refresh();
       sender.sendMessage(langManager.getMessage("kills-resetall"));
       return true;
     }

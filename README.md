@@ -9,7 +9,7 @@ A powerful Minecraft Paper plugin for managing configurable mob spawn groups wit
 - 🎯 **Multiple Spawn Groups** - Create unlimited spawn groups, each with multiple spawn points
 - 🌊 **Wave System** - Multiple chests per group for different mob waves and difficulty progression
 - 📦 **Per-Wave Mob Pools** - Each wave has its own chest of spawn eggs for complete control
-- 🎲 **Flexible Spawning** - Spawn at one random point or all points simultaneously
+- 🎲 **Flexible Spawning** - Scatter mobs over random points or spawn at all points simultaneously
 - 👁️ **Visual Markers** - Display spawn points with colorful particle clouds
 - 🤖 **Command Block Support** - Commands run from command blocks without permission checks; `/addspawn` and `/removespawn` act on the command block's own position
 - 🌍 **Multi-Language** - Fully translatable message system
@@ -18,9 +18,11 @@ A powerful Minecraft Paper plugin for managing configurable mob spawn groups wit
 
 ## Requirements
 
-- Minecraft Server: Paper 1.20.4+ (or compatible forks)
-- Java: 17+
+- Minecraft Server: Paper 1.21.11 (or compatible forks)
+- Java: 21+
 - Maven: 3.6+ (for building)
+
+Running 1.20.x? Use the v1.2.0 jar. This line targets 1.21.11 and will not load on 1.20.
 
 ## Installation
 
@@ -73,7 +75,7 @@ Create multiple chests with different mob compositions:
 
 ### 4. Summon specific waves!
 ```
-/summonmobs arena wave1 random 5    # Spawn 5 easy mobs at one random point
+/summonmobs arena wave1 random 5    # Spawn 5 easy mobs, each at a random point
 /summonmobs arena wave2 all 3       # Spawn 3 hard mobs at each point
 /summonmobs arena boss random 1     # Spawn 1 boss mob
 ```
@@ -90,6 +92,18 @@ Create multiple chests with different mob compositions:
 | `/setchest <group> <wave>` | Set the spawn egg chest for a group wave (look at chest) | `mobclash.setchest` |
 | `/summonmobs <group> <wave> <random\|all> [amount]` | Summon mobs from the specified wave | `mobclash.summon` |
 | `/kills [top\|reset\|resetall] [amount]` | View kill statistics and leaderboard | `mobclash.kills` |
+| `/killboard [world <on\|off>\|alloff]` | Show the kill leaderboard in the sidebar | `mobclash.killboard` |
+
+### Kill leaderboard sidebar
+
+`/killboard` toggles a sidebar with the top 10 killers for the player who runs it. A player
+outside the top 10 still gets a line with their own count. It updates on every kill and reset.
+
+- `/killboard world on|off` switches it for everyone in the sender's current world. From a
+  command block, that is the block's world. It does not follow players who change world later.
+- `/killboard alloff` turns it off for everyone in every world.
+
+The setting lasts until the player quits. Everyone joins with it off.
 
 **Note:** Commands run from command blocks and the console without requiring permissions. `/setchest` is the one exception to command-block use: it picks the chest you are looking at, so it needs a player.
 
@@ -107,6 +121,11 @@ Create multiple chests with different mob compositions:
 | `mobclash.summon` | Summon mobs | op |
 | `mobclash.kills` | View kill statistics and leaderboard | all |
 | `mobclash.kills.resetall` | Reset every player's kill count | op |
+| `mobclash.killboard` | Toggle the kill leaderboard sidebar for yourself | all |
+| `mobclash.killboard.admin` | Switch the sidebar for a whole world, or off for everyone | op |
+
+Each command is hidden from players who lack its node. Command blocks and the console run
+everything.
 
 The old `mobspawner.*` nodes are still declared as parents of the matching `mobclash.*` node, so
 an existing permissions setup keeps working unchanged. They default to `false` and are only there
@@ -155,6 +174,10 @@ summonmobs-success: "&aSpawned {0} mob(s) in group '{1}'!"
 ```
 
 Use `&` for color codes (e.g., `&a` = green, `&c` = red, `&e` = yellow).
+
+The copy in the plugin folder is written once and never overwritten. Any message it lacks, such
+as one added by a later release, comes from the plugin's built-in copy, so an upgrade needs no
+edit here.
 
 ## Examples
 
@@ -366,6 +389,17 @@ For issues, questions, or contributions:
 This plugin is provided as-is for use on Minecraft servers.
 
 ## Changelog
+
+### Unreleased
+
+- Requires Paper 1.21.11 and Java 21. Mobs spawned under 1.2.0 keep counting towards kills.
+- `/summonmobs ... random N` puts each mob at its own random spawn point, instead of all N at
+  one.
+- `/killboard`: the kill leaderboard in the sidebar, per player or for a whole world.
+- Messages missing from an older `language.yml` fall back to the built-in text instead of
+  showing "Missing translation".
+- Each command is registered with its permission node, so players who lack it no longer see it
+  in tab completion. Typing it gives "Unknown command" instead of the `no-permission` message.
 
 ### v1.2.0
 

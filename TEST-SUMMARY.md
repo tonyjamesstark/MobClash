@@ -122,7 +122,7 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 ### 7. SummonMobsCommandTest.java (18 tests)
 **Location:** `src/test/java/io/tjs/mobclash/commands/`
 
-✅ `randomModeSpawnsTheRequestedCountAtOnePoint` - Random spawn mode
+✅ `randomModeSpreadsTheRequestedCountOverThePoints` - Random spawn mode
 ✅ `allModeSpawnsTheRequestedCountAtEveryPoint` - All locations spawn mode
 ✅ `aCommandBlockMaySummonWithoutPermission` - Command block bypass
 ✅ `anEggWhoseEnumNameDiffersFromItsEntityStillMaps` - MOOSHROOM egg -> MUSHROOM_COW

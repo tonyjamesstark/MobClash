@@ -1,6 +1,7 @@
 package io.tjs.mobclash.listeners;
 
 import io.tjs.mobclash.MobClashPlugin;
+import io.tjs.mobclash.managers.KillBoard;
 import io.tjs.mobclash.managers.MobTracker;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,10 +16,12 @@ public class MobDeathListener implements Listener {
 
   private final MobClashPlugin plugin;
   private final MobTracker mobTracker;
+  private final KillBoard killBoard;
 
-  public MobDeathListener(MobClashPlugin plugin, MobTracker mobTracker) {
+  public MobDeathListener(MobClashPlugin plugin, MobTracker mobTracker, KillBoard killBoard) {
     this.plugin = plugin;
     this.mobTracker = mobTracker;
+    this.killBoard = killBoard;
   }
 
   @EventHandler
@@ -47,6 +50,7 @@ public class MobDeathListener implements Listener {
 
     // Record the kill
     mobTracker.recordKill(killer);
+    killBoard.refresh();
 
     // Handle loot directly to inventory if configured
     if (plugin.getConfig().getBoolean("loot-to-inventory", false)) {
