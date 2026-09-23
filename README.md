@@ -27,7 +27,7 @@ Running 1.20.x? Use the v1.2.0 jar. This line targets 1.21.11 and will not load 
 ## Installation
 
 ### From Release
-1. Download the latest `mobclash-1.2.0.jar` from releases
+1. Download the latest `mobclash-2.0.0.jar` from releases
 2. Place it in your server's `plugins/` folder
 3. Restart your server
 4. Configuration files will be generated in `plugins/MobClash/`
@@ -46,8 +46,8 @@ mvn spotless:apply
 # Build with Maven (runs formatting check automatically)
 mvn clean package
 
-# The JAR will be in target/mobclash-1.2.0.jar
-cp target/mobclash-1.2.0.jar /path/to/server/plugins/
+# The JAR will be in target/mobclash-2.0.0.jar
+cp target/mobclash-2.0.0.jar /path/to/server/plugins/
 ```
 
 ## Quick Start
@@ -390,7 +390,7 @@ This plugin is provided as-is for use on Minecraft servers.
 
 ## Changelog
 
-### Unreleased
+### v2.0.0
 
 - Requires Paper 1.21.11 and Java 21. Mobs spawned under 1.2.0 keep counting towards kills.
 - `/summonmobs ... random N` puts each mob at its own random spawn point, instead of all N at

@@ -101,20 +101,23 @@ The API surface this plugin touches is small, and the riskiest single change is 
       8 integration. `-Dmaven.compiler.showDeprecation=true` reports no deprecation warnings at all.
 - [x] `PluginYmlTest` still passes — it reads the filtered descriptor, so the `api-version`
       bump goes through it.
-- [ ] Live smoke test on Paper 1.21.11, in this order:
-      1. Fresh install: `/addspawn`, `/setchest`, `/summonmobs`, `/kills`.
-      2. Upgrade-in-place over a v1.2.0 data folder: confirm groups and kills load.
-      3. A command block runs `/addspawn` and `/summonmobs` with no permissions granted.
-      4. `/help addspawn` and `/help mobclash:addspawn` both show the right label.
-      5. A wave chest holding a mooshroom egg and a 1.21-only egg both spawn.
-- [ ] Watch the console for the migration line and for any `WARNING` from `SpawnManager`.
+- [x] Live smoke test on Paper 1.21.11. Done 2026-09-23 on Purpur 1.21.11 with the 2.0.0 jar:
+      1. `/setchest` from an op bot, `/summonmobs`, `/kills` all work.
+      2. Upgrade-in-place over a v1.2.0 data folder: groups, chests and kills load (also 2026-09-22).
+      3. A command block ran `/addspawn` (point placed at the block) and `/summonmobs`.
+      4. `/help addspawn` shows the right label. `/help mobclash:addspawn` prints "No help for":
+         Bukkit's help map has no topic for the plugin-qualified label. Not a regression from
+         this phase; the 1.2.0 check of that form was read from source, not run.
+      5. A wave chest holding a mooshroom egg and a bogged egg (1.21-only) spawned both, per the
+         tag log. The world was Peaceful, so the bogged despawned at once.
+- [x] Watch the console for the migration line and for any `WARNING` from `SpawnManager`. None.
 
 ### Ship
-- [ ] Decide the version. Recommendation: **2.0.0**. It drops 1.20.x support, which is a
+- [x] Decide the version. **2.0.0**, as recommended. It drops 1.20.x support, which is a
       breaking change for anyone running the old jar, and the major number is the only honest
       signal of that.
 - [x] README: state the supported Minecraft version and the Java requirement.
-- [ ] Release note, tag, and the same manual-release flow as v1.2.0.
+- [x] Release note, tag, and the same manual-release flow as v1.2.0. `.scratch/release-notes-v2.0.0.md`.
 
 ## Rollback
 

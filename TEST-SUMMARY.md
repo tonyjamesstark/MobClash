@@ -2,8 +2,8 @@
 
 ## Test Coverage Overview
 
-**Total Test Files:** 10
-**Total Test Cases:** 80 (72 unit, run by `mvn test`; 8 integration, run only by `mvn verify`)
+**Total Test Files:** 12
+**Total Test Cases:** 103 (95 unit, run by `mvn test`; 8 integration, run only by `mvn verify`)
 **Package:** `io.tjs.mobclash`
 
 > Counts here are maintained by hand and have drifted before. Treat the surefire/failsafe output
@@ -47,13 +47,15 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 
 ---
 
-### 3. LanguageManagerTest.java (5 tests)
+### 3. LanguageManagerTest.java (7 tests)
 **Location:** `src/test/java/io/tjs/mobclash/managers/`
 
 ✅ `testGetMessageSimple` - Basic message retrieval
 ✅ `testGetMessageWithPlaceholder` - Single placeholder replacement
 ✅ `testGetMessageWithMultiplePlaceholders` - Multiple placeholder replacement
 ✅ `testGetMessageMissingKey` - Missing translation handling
+✅ `aKeyMissingFromAnOlderCopyFallsBackToTheBundledOne` - an upgraded server's old file still gets new keys
+✅ `aLocallyEditedMessageWinsOverTheBundledOne` - the data-folder copy takes priority
 ✅ `testColorCodeConversion` - & to § color code conversion
 
 **Key Features Tested:**
@@ -64,7 +66,7 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 
 ---
 
-### 4. MobTrackerTest.java (10 tests) ⭐ NEW
+### 4. MobTrackerTest.java (11 tests)
 **Location:** `src/test/java/io/tjs/mobclash/managers/`
 
 ✅ `testTagMob` - Tag mobs with NBT data
@@ -143,7 +145,7 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 
 ---
 
-### 8. PluginYmlTest.java (6 tests)
+### 8. PluginYmlTest.java (7 tests)
 **Location:** `src/test/java/io/tjs/mobclash/`
 
 ✅ `theDescriptorParsesAndNamesThePlugin` - plugin.yml is valid YAML naming the main class
@@ -151,6 +153,7 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 ✅ `everyPermissionNodeUsedInCodeIsDeclared` - no node exists only in Java
 ✅ `theWildcardGrantsEveryNodeUsedInCode` - `mobclash.*` reaches every node
 ✅ `theDeprecatedNamespaceStillGrantsTheNewNodes` - `mobspawner.*` still works
+✅ `everyCommandHelpEntryIsUsableAsBukkitRendersIt` - /help has a description and a `/<command>` usage
 ✅ `everyDeclaredCommandIsRegisteredByThePlugin` - no command declared without an executor
 
 **Key Features Tested:**
@@ -158,9 +161,43 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 
 ---
 
+### 9. KillBoardTest.java (10 tests)
+**Location:** `src/test/java/io/tjs/mobclash/managers/`
+
+Each fake scoreboard is backed by a map of its sidebar lines, so the tests assert on what a
+player would read.
+
+✅ `showingPutsTheLeaderboardInTheSidebar`
+✅ `aViewerOutsideTheTopTenStillSeesTheirOwnLine`
+✅ `aNewViewerWithNoKillsSeesAZero`
+✅ `refreshUpdatesCountsAndDropsLinesThatLeft`
+✅ `hidingPutsBackTheScoreboardThePlayerHadBefore`
+✅ `hidingLeavesAScoreboardAnotherPluginSwappedIn`
+✅ `toggleFlipsAndReportsTheNewState`
+✅ `showingTwiceKeepsOneBoard`
+✅ `hideAllRestoresEveryViewerAndCountsThem`
+✅ `aPlayerWhoQuitsComesBackWithItOff`
+
+---
+
+### 10. KillBoardCommandTest.java (9 tests)
+**Location:** `src/test/java/io/tjs/mobclash/commands/`
+
+✅ `aPlayerTogglesTheirOwn`
+✅ `theConsoleHasNoBoardOfItsOwn`
+✅ `worldOnShowsItToEveryoneInTheSendersWorld`
+✅ `worldOffHidesItFromEveryoneInTheSendersWorld`
+✅ `aCommandBlockUsesItsOwnWorld`
+✅ `theConsoleHasNoWorldToSwitch`
+✅ `theAdminFormsNeedTheAdminPermission`
+✅ `allOffTurnsItOffEverywhere`
+✅ `aBadStateOrSubcommandPrintsTheUsage`
+
+---
+
 ## Integration Tests
 
-### 9. DataFileTest.java (5 tests)
+### 11. DataFileTest.java (5 tests)
 **Location:** `src/test/java/io/tjs/mobclash/`
 
 ✅ `adoptMovesTheWholeTreeAndLeavesNothingBehind` - the one-time config.yml migration
@@ -174,7 +211,7 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 
 ---
 
-### 10. MobClashPluginIT.java (8 tests)
+### 12. MobClashPluginIT.java (8 tests)
 **Location:** `src/test/java/io/tjs/mobclash/`
 
 ✅ `testCompleteWorkflowWithWaves` - End-to-end wave system
@@ -308,6 +345,8 @@ void testFeatureName() {
 - [x] ListSpawnsCommandTest.java
 - [x] SummonMobsCommandTest.java
 - [x] PluginYmlTest.java
+- [x] KillBoardTest.java
+- [x] KillBoardCommandTest.java
 - [x] DataFileTest.java
 - [x] MobClashPluginIT.java
 - [ ] KillsCommandTest.java (can be added)
