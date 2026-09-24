@@ -1,448 +1,49 @@
 # MobClash
 
-A powerful Minecraft Paper plugin for managing configurable mob spawn groups with per-group customization and flexible spawning modes.
-
-⚔️ **Clash with endless possibilities!**
+A Paper plugin for arena-style mob waves. Mark spawn points in named groups, fill a chest with
+spawn eggs for each wave, then summon a wave by command or command block.
 
 ## Features
 
-- 🎯 **Multiple Spawn Groups** - Create unlimited spawn groups, each with multiple spawn points
-- 🌊 **Wave System** - Multiple chests per group for different mob waves and difficulty progression
-- 📦 **Per-Wave Mob Pools** - Each wave has its own chest of spawn eggs for complete control
-- 🎲 **Flexible Spawning** - Scatter mobs over random points or spawn at all points simultaneously
-- 👁️ **Visual Markers** - Display spawn points with colorful particle clouds
-- 🤖 **Command Block Support** - Commands run from command blocks without permission checks; `/addspawn` and `/removespawn` act on the command block's own position
-- 🌍 **Multi-Language** - Fully translatable message system
-- 📊 **Configurable Logging** - Adjust verbosity from detailed to silent
-- ✅ **Fully Tested** - Comprehensive unit and integration test suite
+- 🎯 **Spawn groups** - any number of groups, each with many spawn points
+- 🌊 **Waves** - one chest of spawn eggs per wave, weighted by egg count
+- 🎲 **Two modes** - scatter mobs over random points, or spawn at every point
+- 📊 **Kill tracking** - `/kills` leaderboard and an optional sidebar
+- 🤖 **Command blocks** - run every command except `/setchest`, with no permissions needed
+- 🌍 **Translatable** - every message lives in `language.yml`
 
 ## Requirements
 
-- Minecraft Server: Paper 1.21.11 (or compatible forks)
-- Java: 21+
-- Maven: 3.6+ (for building)
+Paper 1.21.11 (or a fork) on Java 21. For 1.20.x, use the v1.2.0 jar.
 
-Running 1.20.x? Use the v1.2.0 jar. This line targets 1.21.11 and will not load on 1.20.
+## Install
 
-## Installation
+1. Download `mobclash-2.0.0.jar` from releases.
+2. Put it in `plugins/` and restart the server.
 
-### From Release
-1. Download the latest `mobclash-2.0.0.jar` from releases
-2. Place it in your server's `plugins/` folder
-3. Restart your server
-4. Configuration files will be generated in `plugins/MobClash/`
+## Quick start
 
-### Building from Source
-```bash
-# Clone or download the project
-cd mobclash
-
-# Check code formatting
-mvn spotless:check
-
-# Auto-fix formatting issues
-mvn spotless:apply
-
-# Build with Maven (runs formatting check automatically)
-mvn clean package
-
-# The JAR will be in target/mobclash-2.0.0.jar
-cp target/mobclash-2.0.0.jar /path/to/server/plugins/
+```
+/addspawn arena                     # at each spot mobs should appear
+/setchest arena wave1               # while looking at a chest of spawn eggs
+/summonmobs arena wave1 random 5    # 5 mobs, each at a random point
+/summonmobs arena wave1 all 3       # 3 mobs at every point
+/killboard                          # show the kill leaderboard in your sidebar
 ```
 
-## Quick Start
-
-### 1. Create a spawn group
-```
-/addspawn arena
-/addspawn arena
-/addspawn arena
-```
-Stand at each location where you want mobs to spawn.
-
-### 2. Fill chests with spawn eggs for different waves
-Create multiple chests with different mob compositions:
-- **Chest 1** (easy wave): 10 zombie eggs, 5 skeleton eggs
-- **Chest 2** (hard wave): 5 zombie eggs, 5 skeleton eggs, 5 creeper eggs
-- **Chest 3** (boss wave): 1 wither egg
-
-### 3. Link each chest to your group as a different wave
-```
-/setchest arena wave1    # Look at chest 1
-/setchest arena wave2    # Look at chest 2
-/setchest arena boss     # Look at chest 3
-```
-
-### 4. Summon specific waves!
-```
-/summonmobs arena wave1 random 5    # Spawn 5 easy mobs, each at a random point
-/summonmobs arena wave2 all 3       # Spawn 3 hard mobs at each point
-/summonmobs arena boss random 1     # Spawn 1 boss mob
-```
-
-## Commands
-
-| Command | Description | Permission |
-|---------|-------------|------------|
-| `/addspawn <group>` | Add your current location to a spawn group | `mobclash.addspawn` |
-| `/removespawn <group>` | Remove the nearest spawn point from a group | `mobclash.removespawn` |
-| `/listgroups` | List all spawn groups and their point counts | `mobclash.listgroups` |
-| `/listspawns <group>` | List all spawn point coordinates for a group | `mobclash.listspawns` |
-| `/showspawns <group>` | Flash a particle marker at each spawn point | `mobclash.showspawns` |
-| `/setchest <group> <wave>` | Set the spawn egg chest for a group wave (look at chest) | `mobclash.setchest` |
-| `/summonmobs <group> <wave> <random\|all> [amount]` | Summon mobs from the specified wave | `mobclash.summon` |
-| `/kills [top\|reset\|resetall] [amount]` | View kill statistics and leaderboard | `mobclash.kills` |
-| `/killboard [world <on\|off>\|alloff]` | Show the kill leaderboard in the sidebar | `mobclash.killboard` |
-
-### Kill leaderboard sidebar
-
-`/killboard` toggles a sidebar with the top 10 killers for the player who runs it. A player
-outside the top 10 still gets a line with their own count. It updates on every kill and reset.
-
-- `/killboard world on|off` switches it for everyone in the sender's current world. From a
-  command block, that is the block's world. It does not follow players who change world later.
-- `/killboard alloff` turns it off for everyone in every world.
-
-The setting lasts until the player quits. Everyone joins with it off.
-
-**Note:** Commands run from command blocks and the console without requiring permissions. `/setchest` is the one exception to command-block use: it picks the chest you are looking at, so it needs a player.
-
-## Permissions
-
-| Permission | Description | Default |
-|------------|-------------|---------|
-| `mobclash.*` | Grants all permissions | op |
-| `mobclash.addspawn` | Add spawn points | op |
-| `mobclash.removespawn` | Remove spawn points | op |
-| `mobclash.listgroups` | List spawn groups | op |
-| `mobclash.listspawns` | List spawn point coordinates | op |
-| `mobclash.showspawns` | Show spawn markers | op |
-| `mobclash.setchest` | Set group chests | op |
-| `mobclash.summon` | Summon mobs | op |
-| `mobclash.kills` | View kill statistics and leaderboard | all |
-| `mobclash.kills.resetall` | Reset every player's kill count | op |
-| `mobclash.killboard` | Toggle the kill leaderboard sidebar for yourself | all |
-| `mobclash.killboard.admin` | Switch the sidebar for a whole world, or off for everyone | op |
-
-Each command is hidden from players who lack its node. Command blocks and the console run
-everything.
-
-The old `mobspawner.*` nodes are still declared as parents of the matching `mobclash.*` node, so
-an existing permissions setup keeps working unchanged. They default to `false` and are only there
-for that migration; new grants should use `mobclash.*`.
-
-Every command is also reachable under its plugin-qualified name, for example
-`/mobclash:addspawn`, which Bukkit registers automatically and which resolves even when another
-plugin claims the same short name.
-
-## Configuration
-
-### config.yml
-```yaml
-# Logging level for plugin operations
-# Options: INFO (verbose), WARNING (quiet), SEVERE (errors only), OFF (silent)
-logging-level: INFO
-
-# If true, mob drops go straight into the killer's inventory instead of onto the ground.
-# Anything that does not fit still drops normally.
-loot-to-inventory: false
-
-# Largest number of mobs a single /summonmobs may spawn. In "all" mode the total is
-# amount x number of spawn points. Set to 0 to disable the cap.
-max-mobs-per-summon: 500
-```
-
-### spawns.yml and kills.yml
-
-The plugin writes what the commands create -- spawn groups, wave chests and kill counts -- to
-`spawns.yml` and `kills.yml`, not to `config.yml`. Those two are machine-written: edit them only
-with the server stopped, since the plugin rewrites each from memory whenever it saves.
-
-`config.yml` is yours. Nothing the plugin writes lands there, so an edit on a running server is
-not overwritten by the next `/addspawn`.
-
-Upgrading from a version that kept everything in `config.yml` moves the data across on first
-start, once, and logs that it did.
-
-### language.yml
-All messages are customizable! Edit `language.yml` to translate or customize messages:
-```yaml
-no-permission: "&cYou don't have permission to use this command."
-addspawn-success: "&aAdded spawn point to group '{0}'! Total points: {1}"
-summonmobs-success: "&aSpawned {0} mob(s) in group '{1}'!"
-# ... and many more
-```
-
-Use `&` for color codes (e.g., `&a` = green, `&c` = red, `&e` = yellow).
-
-The copy in the plugin folder is written once and never overwritten. Any message it lacks, such
-as one added by a later release, comes from the plugin's built-in copy, so an upgrade needs no
-edit here.
-
-## Examples
-
-### Progressive Wave System
-```bash
-# Create arena spawn points around a battle area
-/addspawn arena
-# (move to different locations and repeat)
-
-# Set up wave progression
-/setchest arena wave1    # Chest with: 10 zombies
-/setchest arena wave2    # Chest with: 5 zombies, 5 skeletons
-/setchest arena wave3    # Chest with: 3 zombies, 3 skeletons, 4 creepers
-/setchest arena boss     # Chest with: 1 wither or ender dragon
-
-# Trigger waves with command blocks
-/summonmobs arena wave1 all 3
-# ... wait 60 seconds ...
-/summonmobs arena wave2 all 3
-# ... wait 60 seconds ...
-/summonmobs arena wave3 all 3
-# ... wait 60 seconds ...
-/summonmobs arena boss random 1
-```
-
-### Themed Mob Waves
-```bash
-# Undead wave
-/setchest dungeon undead    # Chest: zombies, skeletons, zombie pigmen
-
-# Ranged wave  
-/setchest dungeon ranged    # Chest: skeletons, strays, pillagers
-
-# Explosive wave
-/setchest dungeon explosive # Chest: creepers, TNT minecarts
-
-# Flying wave
-/setchest dungeon flying    # Chest: phantoms, vexes, blazes
-
-# Trigger specific themed waves
-/summonmobs dungeon undead all 5
-/summonmobs dungeon explosive random 3
-```
-
-### Boss Fight with Minion Waves
-```bash
-# Create boss room spawn points
-/addspawn boss_room    # Center for boss
-/addspawn boss_room    # Corners for adds
-/addspawn boss_room
-/addspawn boss_room
-
-# Set up different waves
-/setchest boss_room boss     # Chest: 1 wither
-/setchest boss_room adds     # Chest: 5 zombies, 5 skeletons
-
-# Boss fight sequence
-/summonmobs boss_room boss random 1      # Spawn boss in center
-# ... every 30 seconds ...
-/summonmobs boss_room adds all 2         # Spawn adds at all corners
-```
-
-### Random Ambushes
-```bash
-# Create multiple ambush points around your base
-/addspawn ambush
-# (repeat at various locations)
-
-# Different difficulty tiers
-/setchest ambush easy     # Chest: 10 zombies, 5 spiders
-/setchest ambush hard     # Chest: 5 creepers, 3 endermen, 2 blazes
-
-# Random spawn with redstone triggers
-/summonmobs ambush easy random 5
-/summonmobs ambush hard random 3
-```
-
-### Tower Defense Style
-```bash
-# Create spawn points along a path
-/addspawn path1
-/addspawn path2  
-/addspawn path3
-
-# Create difficulty progression
-/setchest path1 round1   # 10 zombies
-/setchest path1 round5   # 5 zombies, 5 skeletons
-/setchest path1 round10  # 3 zombies, 3 skeletons, 4 creepers, 2 spiders
-/setchest path1 round15  # Boss round!
-
-# Spawn rounds sequentially
-/summonmobs path1 round1 random 5
-/summonmobs path1 round5 random 5
-/summonmobs path1 round10 random 8
-/summonmobs path1 round15 random 1
-```
-
-## Advanced Usage
-
-### Command Blocks
-Commands run in command blocks without permission issues. `/addspawn` and `/removespawn` use the
-command block's own position, so a command block can build a group where it stands. `/setchest`
-still needs a player, since it targets the chest you are looking at:
-```
-Command Block 1: /summonmobs arena wave1 random 10
-[Wait 60s]
-Command Block 2: /summonmobs arena wave2 random 10
-[Wait 60s]
-Command Block 3: /summonmobs arena boss random 1
-Redstone Chain → Progressive waves!
-```
-
-### Weighted Mob Spawning
-The chest system is weighted by stack size:
-- 10 zombie eggs + 2 creeper eggs = 83% zombies, 17% creepers
-- Adjust egg amounts to control mob distribution within each wave
-
-### Multiple Waves per Group
-Create different waves for different scenarios:
-- `arena/wave1` - Easy mobs (zombies)
-- `arena/wave2` - Medium mobs (zombies + skeletons)
-- `arena/wave3` - Hard mobs (zombies + skeletons + creepers)
-- `arena/boss` - Boss mobs (wither, ender dragon)
-- `arena/special` - Event mobs (special occasions)
-
-Each wave uses the same spawn points but different mob compositions!
-
-## Development
-
-## Updated Checklist 📋
-
-### Main Files:
-- `MobClashPlugin.java` (main class)
-- `SpawnManager.java` 
-- `LanguageManager.java`
-- All command files use `io.tjs.mobclash.commands`
-- All manager files use `io.tjs.mobclash.managers`
-
-### Directory Structure:
-```
-mobclash/
-├── src/main/java/io/tjs/mobclash/
-│   ├── MobClashPlugin.java
-│   ├── commands/
-│   ├── listeners/
-│   └── managers/
-└── src/test/java/io/tjs/mobclash/
-```
-
-### Building
-```bash
-# Check code formatting
-mvn spotless:check
-
-# Auto-fix code formatting
-mvn spotless:apply
-
-# Run tests only
-mvn test
-
-# Run integration tests
-mvn integration-test
-
-# Full build with tests and formatting
-mvn clean verify
-```
-
-### Code Style
-The project uses [Spotless](https://github.com/diffplug/spotless) with Google Java Format to enforce consistent code style:
-- **Google Java Format** for Java files
-- **Prettier** for YAML files  
-- **Automatic license headers** on all source files
-- **Import optimization** (removes unused imports)
-
-Code formatting is automatically checked during the build. If formatting issues are found, the build will fail with instructions on how to fix them.
-
-### Testing
-The plugin includes comprehensive tests:
-- **Unit Tests** - Test individual components (12+ tests)
-- **Integration Tests** - Test complete workflows (8+ tests)
-- Coverage includes permissions, command blocks, spawn logic, and more
-
-## Troubleshooting
-
-**Mobs not spawning?**
-- Check that the group exists: `/listgroups`
-- Verify chest is set: `/showspawns <group>` to see spawn points
-- Ensure chest has spawn eggs
-- Check console for error messages
-
-**Permission denied?**
-- Grant the appropriate `mobclash.*` permission
-- Or use command blocks which bypass permissions
-
-**Configuration not loading?**
-- Delete `plugins/MobClash/config.yml` to regenerate defaults
-- Check console for YAML syntax errors
-- Verify file encoding is UTF-8
-
-## Support
-
-For issues, questions, or contributions:
-- Check the console logs (set `logging-level: INFO` for details)
-- Review this README
-- Submit issues with full error logs and configuration
+## Documentation
+
+- [Commands](docs/commands.md) - every command, summoning modes, kills, the sidebar
+- [Permissions](docs/permissions.md) - nodes and defaults
+- [Configuration](docs/configuration.md) - `config.yml`, data files, `language.yml`
+- [Examples](docs/examples.md) - timed waves, boss fights, ambushes, kill races
+- [Troubleshooting](docs/troubleshooting.md)
+- [Development](docs/development.md) - building and testing
+- [Changelog](CHANGELOG.md)
 
 ## License
 
 This plugin is provided as-is for use on Minecraft servers.
-
-## Changelog
-
-### v2.0.0
-
-- Requires Paper 1.21.11 and Java 21. Mobs spawned under 1.2.0 keep counting towards kills.
-- `/summonmobs ... random N` puts each mob at its own random spawn point, instead of all N at
-  one.
-- `/killboard`: the kill leaderboard in the sidebar, per player or for a whole world.
-- Messages missing from an older `language.yml` fall back to the built-in text instead of
-  showing "Missing translation".
-- Each command is registered with its permission node, so players who lack it no longer see it
-  in tab completion. Typing it gives "Unknown command" instead of the `no-permission` message.
-
-### v1.2.0
-
-Behaviour changes that need a word before you upgrade:
-
-- Permissions moved from `mobspawner.*` to `mobclash.*`. The old nodes still work -- each is
-  declared as a parent of its replacement -- so an existing permissions config needs no edit.
-  New grants should use `mobclash.*`.
-- Spawn points and kill counts moved out of `config.yml` into `spawns.yml` and `kills.yml`. The
-  first start after upgrading moves them across automatically and logs that it did.
-- `max-mobs-per-summon` caps what a single `/summonmobs` may spawn, default 500.
-
-Fixes:
-
-- A missing or unloaded world no longer erases the spawn configuration.
-- The command-block permission bypass works. It never ran before: `plugin.yml` declared a
-  permission per command, so Bukkit's own check rejected the sender first.
-- Mooshroom and snow golem spawn eggs are no longer ignored.
-- `/kills top` no longer throws when given a negative count.
-- Corrupt or hand-edited kill data is discarded per entry instead of stopping the plugin loading.
-- Loot sent to a full inventory is no longer at risk of duplicating.
-- Mobs a protection plugin refuses to spawn are no longer counted as spawned.
-- Group and wave names containing a `.` are rejected rather than silently failing to reload.
-- `/showspawns` draws particles instead of spawning real entities that `@e` selectors could see.
-- `/version MobClash` reports the real version.
-
-### v1.1.0
-- Loot-to-inventory handling
-- Player kill tracking and the `/kills` command
-
-### v1.0.0 (Initial Release)
-- Multiple spawn groups with configurable points
-- Per-group chest system
-- Random and all-location spawn modes
-- Visual spawn markers
-- Command block support
-- Configurable logging
-- Full test coverage
-- Translatable messages
-
----
-
-**Made with ❤️ for the Minecraft community**
 
 ---
 
