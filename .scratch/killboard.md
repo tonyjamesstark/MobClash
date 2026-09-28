@@ -44,7 +44,7 @@ and `KillsCommand` after `reset` and `resetall`.
 - [x] `language.yml`: title, usage, on/off, world, alloff messages
 - [x] Unit tests: `KillBoardTest`, `KillBoardCommandTest`
 - [x] `mvn -o clean verify` green, spotless clean
-- [x] Live on `~/mcserver` instance `mobclash` with the mineflayer bot reading the sidebar:
+- [x] Live on `~/mc/mcserver` instance `mobclash` with the mineflayer bot reading the sidebar:
       toggle on, kill, own line, toggle off restores, `world on`, `alloff`, rejoin is off
       Done 2026-09-23 on Purpur 1.21.11, two mineflayer players (Clasher with kills, Newbie
       without), reading the sidebar from the score packets. Passed: rejoin starts off; on shows

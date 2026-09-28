@@ -2,8 +2,8 @@
 
 ## Test Coverage Overview
 
-**Total Test Files:** 12
-**Total Test Cases:** 103 (95 unit, run by `mvn test`; 8 integration, run only by `mvn verify`)
+**Total Test Files:** 17
+**Total Test Cases:** 144 (136 unit, run by `mvn test`; 8 integration, run only by `mvn verify`)
 **Package:** `io.tjs.mobclash`
 
 > Counts here are maintained by hand and have drifted before. Treat the surefire/failsafe output
@@ -47,7 +47,7 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 
 ---
 
-### 3. LanguageManagerTest.java (7 tests)
+### 3. LanguageManagerTest.java (8 tests)
 **Location:** `src/test/java/io/tjs/mobclash/managers/`
 
 ✅ `testGetMessageSimple` - Basic message retrieval
@@ -56,6 +56,7 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 ✅ `testGetMessageMissingKey` - Missing translation handling
 ✅ `aKeyMissingFromAnOlderCopyFallsBackToTheBundledOne` - an upgraded server's old file still gets new keys
 ✅ `aLocallyEditedMessageWinsOverTheBundledOne` - the data-folder copy takes priority
+✅ `reloadPicksUpAnEditMadeOnDisk` - `/mobclash reload` rereads the file
 ✅ `testColorCodeConversion` - & to § color code conversion
 
 **Key Features Tested:**
@@ -121,7 +122,7 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 
 ---
 
-### 7. SummonMobsCommandTest.java (18 tests)
+### 7. SummonMobsCommandTest.java (28 tests)
 **Location:** `src/test/java/io/tjs/mobclash/commands/`
 
 ✅ `randomModeSpreadsTheRequestedCountOverThePoints` - Random spawn mode
@@ -133,7 +134,13 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 ✅ `tooFewArgumentsPrintsTheUsage` - Argument validation
 ✅ `anUnknownModeIsRejectedBeforeAnythingIsLookedUp` - Mode validation and its ordering
 ✅ `aMissingGroupIsReported` / `aWaveWithNoChestIsReported` / `aGroupWithNoSpawnPointsIsReported`
-✅ `anAmountAboveTheParseBoundIsRejected` / `anAmountBelowOneIsRejected` / `aNonNumericAmountIsRejected`
+✅ `anAmountAboveTheParseBoundIsRejected` / `anAmountBelowOneIsRejected`
+✅ `anArgumentThatIsNeitherAnAmountNorEquipmentIsRejected` / `anExtraArgumentPrintsTheUsage`
+✅ `anEggsEntityDataIsKeptOnTheSpawnedMob` / `gearFromAnEggNeverDrops` / `aRefusedSpawnFromADataEggIsNotTagged`
+✅ `aDataEggThatIsNotAMobIsSkippedWithAWarning` / `aDataEggWithRidersIsSkippedWithAWarning` / `aDataEggWithAFixedUuidIsSkippedWithAWarningToTheCommandBlock`
+✅ `equipmentFalseLeavesVanillaGearAlone` - no equipment argument, no change to vanilla gear
+✅ `equippingAPlainEggMobClearsVanillaGearAndNothingDrops` - via an empty gear chest
+✅ `aGearChestThatIsNoLongerThereIsReported`
 ✅ `aSummonOverTheTotalCapIsRefused` - amount x points against max-mobs-per-summon
 ✅ `aChestThatIsNoLongerThereIsReported` / `aChestWithNoSpawnEggsIsReported`
 ✅ `aPlayerWithoutThePermissionIsRefused` - Permission denial
@@ -142,6 +149,9 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 - Wave system integration, random vs all modes, mob tagging
 - Spawn-egg to entity mapping through namespaced keys, not enum names
 - Every guard clause, each asserted by the message key it sends
+- Egg entity data kept, bad data eggs skipped with a warning
+- Equipment argument parsing and the clear-then-equip wiring. What is drawn is tested in
+  RandomEquipmentTest; the equip step needs a server registry and was tested live
 
 ---
 
@@ -152,9 +162,9 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 ✅ `theVersionPlaceholderIsSubstitutedByResourceFiltering` - `${project.version}` is filtered
 ✅ `everyPermissionNodeUsedInCodeIsDeclared` - no node exists only in Java
 ✅ `theWildcardGrantsEveryNodeUsedInCode` - `mobclash.*` reaches every node
-✅ `theDeprecatedNamespaceStillGrantsTheNewNodes` - `mobspawner.*` still works
 ✅ `everyCommandHelpEntryIsUsableAsBukkitRendersIt` - /help has a description and a `/<command>` usage
 ✅ `everyDeclaredCommandIsRegisteredByThePlugin` - no command declared without an executor
+✅ `everyCommandHasALineInMobclashHelp` - `/mobclash help` never prints a missing translation
 
 **Key Features Tested:**
 - The descriptor, which nothing else compiles or checks
@@ -195,9 +205,68 @@ player would read.
 
 ---
 
+### 11. RandomEquipmentTest.java (11 tests)
+**Location:** `src/test/java/io/tjs/mobclash/`
+
+The draw is generic over the item type, so these run on strings and Materials, 200,000 draws
+each with a fixed seed.
+
+✅ `zombiesGetArmorAndWeaponsAtVanillasHardDifficultyRates` - 15% armor, 5% weapons, tier and piece odds
+✅ `aPieceIsNeverWornWithoutThePiecesBeforeIt` - boots first, one tier per mob
+✅ `skeletonsNeverDrawAWeapon`
+✅ `aOneTierLadderTakesEveryArmoredMob` - a gear chest's single tier
+✅ `enchantmentLevelsStayWithinTheConfiguredMaximum` / `aMaximumOfZeroTurnsEnchantingOff`
+✅ `emptyPoolsGiveNothing`
+✅ `theShippedDefaultsAreTheRequestedGear` - the jar's config.yml lists
+✅ `aConfigFromBeforeTheSettingGetsTheShippedDefaults` / `aSettingLeftOutOfTheServersSectionFallsBackToItsDefault`
+✅ `unknownConfigEntriesAreSkippedWithAWarning`
+
+---
+
+### 12. MobClashCommandTest.java (5 tests)
+**Location:** `src/test/java/io/tjs/mobclash/commands/`
+
+✅ `helpListsOnlyTheCommandsTheSenderMayRun` - `/mobclash`, `/mobclash help`
+✅ `aSubcommandRunsWithTheArgumentsAfterItsName` - `/mobclash kills top 5`, any case
+✅ `aSubcommandKeepsItsOwnPermission`
+✅ `anUnknownSubcommandIsNamedWithAPointerToHelp`
+✅ `tabCompletionOffersHelpAndTheUsableSubcommandsByPrefix`
+
+---
+
+### 13. ReloadCommandTest.java (3 tests)
+**Location:** `src/test/java/io/tjs/mobclash/commands/`
+
+✅ `reloadsThenConfirmsInTheReloadedLanguage`
+✅ `aFileThatDoesNotParseIsNamedAndNotReportedAsReloaded`
+✅ `aSenderWithoutThePermissionIsRefused`
+
+---
+
+### 14. RequireParsesTest.java (3 tests)
+**Location:** `src/test/java/io/tjs/mobclash/`
+
+✅ `validYamlPasses` / `brokenYamlIsRejectedByName` / `aMissingFilePasses`
+
+---
+
+### 15. MobDeathListenerTest.java (8 tests)
+**Location:** `src/test/java/io/tjs/mobclash/listeners/`
+
+✅ `lootGoesToTheKillerAndOnlyWhatDoesNotFitStaysOnTheGround`
+✅ `withTheSettingOffTheDropsAreLeftAlone`
+✅ `aMobNotSpawnedByMobClashIsIgnored`
+✅ `aDeathNotCausedByAPlayerIsNotCountedOrLooted`
+✅ `aListedMobsDeathIsAnnouncedToTheWholeServer` - with or without `minecraft:`, any case
+✅ `aMobMissingFromTheListIsNotAnnounced`
+✅ `aListedMobMobClashDidNotSummonIsNotAnnounced`
+✅ `theHandlerSkipsCancelledDeathsAndRunsAfterOtherPlugins`
+
+---
+
 ## Integration Tests
 
-### 11. DataFileTest.java (5 tests)
+### 16. DataFileTest.java (5 tests)
 **Location:** `src/test/java/io/tjs/mobclash/`
 
 ✅ `adoptMovesTheWholeTreeAndLeavesNothingBehind` - the one-time config.yml migration
@@ -211,7 +280,7 @@ player would read.
 
 ---
 
-### 12. MobClashPluginIT.java (8 tests)
+### 17. MobClashPluginIT.java (8 tests)
 **Location:** `src/test/java/io/tjs/mobclash/`
 
 ✅ `testCompleteWorkflowWithWaves` - End-to-end wave system
@@ -264,10 +333,11 @@ mvn clean test jacoco:report
 |-----------|-------|----------|
 | SpawnManager (behaviour) | 11 | ✅ High |
 | SpawnManager (persistence round trip) | 6 | ✅ High |
-| LanguageManager | 5 | ✅ High |
-| MobTracker | 10 | ✅ High |
-| Commands | 17 | ⚠️ Partial — `KillsCommand` has no tests |
-| Listeners | 0 | ❌ None — `MobDeathListener` is untested |
+| LanguageManager | 8 | ✅ High |
+| MobTracker | 11 | ✅ High |
+| RandomEquipment (draw and config) | 11 | ✅ High; the equip step was tested live |
+| Commands | 51 | ⚠️ Partial — `KillsCommand` has no tests |
+| Listeners | 5 | ✅ `MobDeathListener` |
 | Integration | 8 | ⚠️ Manager-level only; no command, listener or lifecycle coverage |
 
 ---
@@ -323,15 +393,23 @@ void testFeatureName() {
 - Leaderboard functionality
 - Reset operations
 - UUID-based tracking
+- Server-wide announcements for listed mobs, MobClash mobs only
+
+### Commands under /mobclash ✅
+- `MobClashCommandTest`: help lists only what the sender may run, arguments pass through to the
+  subcommand, each subcommand keeps its permission, unknown names point to help, tab completion
+- `PluginYmlTest`: every command has a help line in `language.yml`
 
 ### Mob Tagging ⭐
 - NBT data persistence
 - Spawn info retrieval
 - MobClash vs natural mob distinction
 
-### Loot to Inventory ❌
-- **Not tested.** `MobDeathListener` has no test of any kind, and no test sets
-  `loot-to-inventory`. This was previously listed here as covered; it was not.
+### Loot to Inventory ✅
+- `MobDeathListenerTest`: drops move to the killer and only what does not fit stays on the
+  ground; the setting off leaves drops alone; non-MobClash mobs and non-player kills are skipped;
+  the handler is registered to skip cancelled deaths (Bukkit enforces that, so only the flags are
+  pinned). The loot table itself runs in the server, not here; smoke-tested live instead.
 
 ---
 
@@ -349,8 +427,12 @@ void testFeatureName() {
 - [x] KillBoardCommandTest.java
 - [x] DataFileTest.java
 - [x] MobClashPluginIT.java
+- [x] RandomEquipmentTest.java
+- [x] MobClashCommandTest.java
+- [x] ReloadCommandTest.java
+- [x] RequireParsesTest.java
+- [x] MobDeathListenerTest.java
 - [ ] KillsCommandTest.java (can be added)
-- [ ] MobDeathListenerTest.java (can be added)
 
 ---
 

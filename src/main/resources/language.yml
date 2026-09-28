@@ -9,6 +9,13 @@ invalid-number: "&cInvalid number!"
 invalid-amount: "&cAmount must be between 1 and 100."
 invalid-name: "&cInvalid name '{0}'! Use letters, numbers, _ and - only (max 32 characters)."
 no-location: "&cThis command must be run by a player or from a command block."
+unknown-subcommand: "&c'{0}' is not a MobClash command. Try /mobclash help."
+reload-success: "&aReloaded config.yml and language.yml."
+reload-failed: "&cNot reloaded: {0} has a syntax error. Nothing changed; the console has the details."
+egg-unknown-type: "&eIgnoring {0} in the wave chest: no mob matches it on this server version."
+egg-not-a-mob: "&eIgnoring {0} in the wave chest: its entity data does not spawn a mob."
+egg-has-riders: "&eIgnoring {0} in the wave chest: eggs with riders (Passengers) are not supported."
+egg-has-uuid: "&eIgnoring {0} in the wave chest: an egg with a fixed UUID can spawn only one mob."
 
 # Group Messages
 group-not-exist: "&cGroup '{0}' doesn't exist!"
@@ -42,12 +49,13 @@ setchest-success: "&aSpawn egg chest '{1}' set for group '{0}'!"
 must-look-chest: "&cYou must be looking at a chest!"
 
 # Summon Mobs Command
-summonmobs-usage: "&cUsage: /summonmobs <group> <wave> <random|all> [amount]"
+summonmobs-usage: "&cUsage: /summonmobs <group> <wave> <random|all> [amount] [true|false|<gear chest>]"
 summonmobs-success: "&aSpawned {0} mob(s) in group '{1}' wave '{2}'!"
 invalid-mode: "&cMode must be 'random' or 'all'!"
 wave-not-set: "&cWave '{1}' not set for group '{0}'! Use /setchest {0} {1} first."
 chest-missing: "&cThe configured chest no longer exists!"
 no-spawn-eggs: "&cNo spawn eggs found in the chest!"
+invalid-equipment: "&c'{0}' is not an amount, true or false, or a chest set with /setchest {1} {0}."
 summon-too-large: "&cThat would spawn {0} mobs, over the limit of {1}. Lower the amount or raise max-mobs-per-summon."
 
 # Kills Command
@@ -67,3 +75,20 @@ killboard-off: "&aKill board off."
 killboard-world-on: "&aKill board turned on for {0} player(s) in {1}."
 killboard-world-off: "&aKill board turned off for {0} player(s) in {1}."
 killboard-alloff: "&aKill board turned off for {0} player(s)."
+
+# Sent to the whole server when a player kills a mob listed in announce-kills.
+# {0} is the player, {1} the mob's name (its custom name, if it has one).
+kill-announcement: "&6&l{0} &ehas slain the &c&l{1}&e!"
+
+# /mobclash help, one line per command, shown only if the player may run it
+help-header: "&6MobClash commands you can use:"
+help-addspawn: "&e/mobclash addspawn <group> &7- add your position to a group"
+help-removespawn: "&e/mobclash removespawn <group> &7- remove the group's point nearest you"
+help-listgroups: "&e/mobclash listgroups &7- list groups and their point counts"
+help-listspawns: "&e/mobclash listspawns <group> &7- list a group's point coordinates"
+help-showspawns: "&e/mobclash showspawns <group> &7- flash a marker at each point"
+help-setchest: "&e/mobclash setchest <group> <wave> &7- use the chest you look at for a wave or gear"
+help-summonmobs: "&e/mobclash summonmobs <group> <wave> <random|all> [amount] [true|false|<gear chest>] &7- summon a wave"
+help-kills: "&e/mobclash kills [top [amount]|reset|resetall] &7- your kills, the leaderboard, or a reset"
+help-killboard: "&e/mobclash killboard [world <on|off>|alloff] &7- the kill leaderboard in your sidebar"
+help-reload: "&e/mobclash reload &7- re-read config.yml and language.yml"

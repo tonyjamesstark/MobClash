@@ -80,6 +80,17 @@ class LanguageManagerTest {
   }
 
   @Test
+  void reloadPicksUpAnEditMadeOnDisk() throws IOException {
+    try (FileWriter writer = new FileWriter(new File(tempDir.toFile(), "language.yml"))) {
+      writer.write("test-message: \"Edited while running\"\n");
+    }
+
+    languageManager.reload();
+
+    assertEquals("Edited while running", languageManager.getMessage("test-message"));
+  }
+
+  @Test
   void testColorCodeConversion() {
     String message = languageManager.getMessage("test-message");
     // & should be converted to §

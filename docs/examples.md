@@ -27,6 +27,20 @@ Then chain command blocks with delays between them:
 /summonmobs boss_room adds all 2
 ```
 
+Whoever lands the killing blow on the wither is announced to the whole server.
+
+## Armed waves
+
+```
+/setchest arena wave1           # chest: 10 zombie eggs, 5 skeleton eggs
+/setchest arena armory          # chest: 2 iron helmets, 1 diamond chestplate, 3 iron swords
+/summonmobs arena wave1 all 3 true      # gear from config.yml
+/summonmobs arena wave1 all 3 armory    # gear from the armory chest
+```
+
+The armory's helmets are twice as likely as a single item would be. Enchant or rename an item in
+the chest and the mobs wear it that way. None of it drops, so players cannot farm the armory.
+
 ## Ambushes
 
 ```

@@ -28,11 +28,16 @@ import org.bukkit.block.Chest;
 import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.Command;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.EntitySnapshot;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EntityEquipment;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.SpawnEggMeta;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -90,7 +95,7 @@ class SummonMobsCommandTest {
 
   /**
    * A stack of one material. Constructing a real ItemStack resolves its ItemType through Registry,
-   * which needs a running server as of 1.21; the command reads only type and amount.
+   * which needs a running server as of 1.21; the command reads only type, amount and item meta.
    */
   private ItemStack itemOf(Material material, int amount) {
     ItemStack item = mock(ItemStack.class);
@@ -158,6 +163,120 @@ class SummonMobsCommandTest {
 
     verify(world, times(4)).spawnEntity(any(Location.class), eq(EntityType.ZOMBIE));
     verify(mobTracker, times(4)).tagMob(any(), eq("test-group"), eq("wave1"));
+  }
+
+  /** An egg whose item meta carries entity_data, as getSpawnedEntity reports it. */
+  private EntitySnapshot givenDataEgg(EntityType type, String snbt, int amount) {
+    EntitySnapshot data = mock(EntitySnapshot.class);
+    when(data.getEntityType()).thenReturn(type);
+    lenient().when(data.getAsString()).thenReturn(snbt);
+    SpawnEggMeta meta = mock(SpawnEggMeta.class);
+    when(meta.getSpawnedEntity()).thenReturn(data);
+    ItemStack egg = itemOf(Material.ZOMBIE_SPAWN_EGG, amount);
+    when(egg.getItemMeta()).thenReturn(meta);
+    givenChestHolding(egg);
+    return data;
+  }
+
+  /** A mob from a data egg, accepted or refused by the server. */
+  private Mob givenDataSpawn(EntitySnapshot data, boolean accepted) {
+    Mob mob = mock(Mob.class);
+    when(mob.isValid()).thenReturn(accepted);
+    lenient().when(mob.getEquipment()).thenReturn(mock(EntityEquipment.class));
+    when(data.createEntity(any(Location.class))).thenReturn(mob);
+    when(spawnManager.getRandom()).thenReturn(new Random(42));
+    when(plugin.getMobTracker()).thenReturn(mobTracker);
+    return mob;
+  }
+
+  @Test
+  void anEggsEntityDataIsKeptOnTheSpawnedMob() {
+    // The swan_farms Monster Mash eggs carry entity_data with attributes, Health, DeathLootTable
+    // and PersistenceRequired. Spawning by type alone produced a vanilla zombie without any of it.
+    givenGroup("test-group", "wave1", List.of(spawnLoc));
+    givenCapOf(500);
+    EntitySnapshot data =
+        givenDataEgg(EntityType.ZOMBIE, "{id:\"minecraft:zombie\",PersistenceRequired:1b}", 2);
+    Mob mob = givenDataSpawn(data, true);
+
+    assertTrue(run(player, "test-group", "wave1", "all", "3"));
+
+    verify(data, times(3)).createEntity(spawnLoc);
+    verify(world, never()).spawnEntity(any(Location.class), any(EntityType.class));
+    verify(mobTracker, times(3)).tagMob(mob, "test-group", "wave1");
+  }
+
+  @Test
+  void gearFromAnEggNeverDrops() {
+    givenGroup("test-group", "wave1", List.of(spawnLoc));
+    givenCapOf(500);
+    EntitySnapshot data =
+        givenDataEgg(
+            EntityType.ZOMBIE,
+            "{id:\"minecraft:zombie\",equipment:{mainhand:{id:\"minecraft:iron_sword\"}}}",
+            1);
+    Mob mob = givenDataSpawn(data, true);
+
+    run(player, "test-group", "wave1", "all", "1");
+
+    for (EquipmentSlot slot : EquipmentSlot.values()) {
+      verify(mob.getEquipment()).setDropChance(slot, 0f);
+    }
+  }
+
+  @Test
+  void aRefusedSpawnFromADataEggIsNotTagged() {
+    givenGroup("test-group", "wave1", List.of(spawnLoc));
+    givenCapOf(500);
+    EntitySnapshot data = givenDataEgg(EntityType.ZOMBIE, "{id:\"minecraft:zombie\"}", 1);
+    givenDataSpawn(data, false);
+
+    run(player, "test-group", "wave1", "random", "3");
+
+    verify(mobTracker, never()).tagMob(any(), anyString(), anyString());
+  }
+
+  @Test
+  void aDataEggThatIsNotAMobIsSkippedWithAWarning() {
+    givenGroup("test-group", "wave1", List.of(spawnLoc));
+    givenCapOf(500);
+    EntitySnapshot data =
+        givenDataEgg(EntityType.FALLING_BLOCK, "{id:\"minecraft:falling_block\"}", 1);
+
+    assertTrue(run(player, "test-group", "wave1", "random"));
+
+    verify(player).sendMessage("egg-not-a-mob");
+    verify(player).sendMessage("no-spawn-eggs");
+    verify(data, never()).createEntity(any(Location.class));
+  }
+
+  @Test
+  void aDataEggWithRidersIsSkippedWithAWarning() {
+    givenGroup("test-group", "wave1", List.of(spawnLoc));
+    givenCapOf(500);
+    EntitySnapshot data =
+        givenDataEgg(
+            EntityType.ZOMBIE,
+            "{id:\"minecraft:zombie\",Passengers:[{id:\"minecraft:zombie\"}]}",
+            1);
+
+    assertTrue(run(player, "test-group", "wave1", "random"));
+
+    verify(player).sendMessage("egg-has-riders");
+    verify(data, never()).createEntity(any(Location.class));
+  }
+
+  @Test
+  void aDataEggWithAFixedUuidIsSkippedWithAWarningToTheCommandBlock() {
+    givenGroup("test-group", "wave1", List.of(spawnLoc));
+    givenCapOf(500);
+    EntitySnapshot data =
+        givenDataEgg(EntityType.ZOMBIE, "{id:\"minecraft:zombie\",UUID:[I;1,2,3,4]}", 1);
+
+    assertTrue(run(commandBlock, "test-group", "wave1", "random"));
+
+    verify(commandBlock).sendMessage("egg-has-uuid");
+    verify(data, never()).createEntity(any(Location.class));
   }
 
   @Test
@@ -264,10 +383,101 @@ class SummonMobsCommandTest {
   }
 
   @Test
-  void aNonNumericAmountIsRejected() {
+  void anArgumentThatIsNeitherAnAmountNorEquipmentIsRejected() {
     givenGroup("test-group", "wave1", List.of(spawnLoc));
     assertTrue(run(player, "test-group", "wave1", "random", "lots"));
-    verify(player).sendMessage("invalid-number");
+    verify(player).sendMessage("invalid-equipment");
+    verify(world, never()).spawnEntity(any(Location.class), any(EntityType.class));
+  }
+
+  @Test
+  void anExtraArgumentPrintsTheUsage() {
+    givenGroup("test-group", "wave1", List.of(spawnLoc));
+    assertTrue(run(player, "test-group", "wave1", "random", "1", "false", "more"));
+    verify(player).sendMessage("summonmobs-usage");
+  }
+
+  @Test
+  void equipmentFalseLeavesVanillaGearAlone() {
+    givenGroup("test-group", "wave1", List.of(spawnLoc));
+    givenCapOf(500);
+    givenChestHolding(itemOf(Material.ZOMBIE_SPAWN_EGG, 1));
+    LivingEntity mob = givenSpawnOf(EntityType.ZOMBIE, true);
+
+    assertTrue(run(player, "test-group", "wave1", "all", "2", "false"));
+
+    verify(world, times(2)).spawnEntity(spawnLoc, EntityType.ZOMBIE);
+    verify(mob, never()).getEquipment();
+  }
+
+  /** A second chest in the group, set with /setchest test-group gear, holding the given items. */
+  private void givenGearChestHolding(ItemStack... contents) {
+    Location gearLoc = new Location(world, 60, 64, 60);
+    Block gearBlock = mock(Block.class);
+    Chest gearChest = mock(Chest.class);
+    Inventory gearInventory = mock(Inventory.class);
+    when(spawnManager.getGroupChest("test-group", "gear")).thenReturn(gearLoc);
+    when(world.getBlockAt(gearLoc)).thenReturn(gearBlock);
+    when(gearBlock.getType()).thenReturn(Material.CHEST);
+    when(gearBlock.getState()).thenReturn(gearChest);
+    when(gearChest.getInventory()).thenReturn(gearInventory);
+    when(gearInventory.getContents()).thenReturn(contents);
+  }
+
+  @Test
+  void aGearChestThatIsNoLongerThereIsReported() {
+    givenGroup("test-group", "wave1", List.of(spawnLoc));
+    Location gearLoc = new Location(world, 60, 64, 60);
+    Block gearBlock = mock(Block.class);
+    when(spawnManager.getGroupChest("test-group", "gear")).thenReturn(gearLoc);
+    when(world.getBlockAt(gearLoc)).thenReturn(gearBlock);
+    when(gearBlock.getType()).thenReturn(Material.STONE);
+
+    assertTrue(run(player, "test-group", "wave1", "random", "gear"));
+
+    verify(player).sendMessage("chest-missing");
+    verify(world, never()).spawnEntity(any(Location.class), any(EntityType.class));
+  }
+
+  /** A zombie as the world spawns it from a plain egg, with an equipment to watch. */
+  private EntityEquipment givenEquippableZombie() {
+    Mob mob = mock(Mob.class);
+    when(mob.isValid()).thenReturn(true);
+    when(mob.getType()).thenReturn(EntityType.ZOMBIE);
+    EntityEquipment equipment = mock(EntityEquipment.class);
+    when(mob.getEquipment()).thenReturn(equipment);
+    when(world.spawnEntity(any(Location.class), eq(EntityType.ZOMBIE))).thenReturn(mob);
+    when(spawnManager.getRandom()).thenReturn(new Random(42));
+    when(plugin.getMobTracker()).thenReturn(mobTracker);
+    when(config.getInt(eq("random-equipment.max-protection"), anyInt())).thenReturn(4);
+    when(config.getInt(eq("random-equipment.max-sharpness"), anyInt())).thenReturn(5);
+    return equipment;
+  }
+
+  @Test
+  void equippingAPlainEggMobClearsVanillaGearAndNothingDrops() {
+    // An empty gear chest draws nothing, which isolates the clearing from what is drawn.
+    givenGroup("test-group", "wave1", List.of(spawnLoc));
+    givenCapOf(500);
+    givenChestHolding(itemOf(Material.ZOMBIE_SPAWN_EGG, 1));
+    givenGearChestHolding();
+    EntityEquipment equipment = givenEquippableZombie();
+
+    assertTrue(run(player, "test-group", "wave1", "all", "gear"));
+
+    for (EquipmentSlot slot :
+        List.of(
+            EquipmentSlot.HEAD,
+            EquipmentSlot.CHEST,
+            EquipmentSlot.LEGS,
+            EquipmentSlot.FEET,
+            EquipmentSlot.HAND)) {
+      verify(equipment).setItem(slot, null);
+    }
+    for (EquipmentSlot slot : EquipmentSlot.values()) {
+      verify(equipment).setDropChance(slot, 0f);
+    }
+    verify(mobTracker).tagMob(any(), eq("test-group"), eq("wave1"));
   }
 
   @Test

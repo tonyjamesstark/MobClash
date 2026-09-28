@@ -2,12 +2,17 @@ package io.tjs.mobclash.listeners;
 
 import io.tjs.mobclash.MobClashPlugin;
 import io.tjs.mobclash.managers.KillBoard;
+import io.tjs.mobclash.managers.LanguageManager;
 import io.tjs.mobclash.managers.MobTracker;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.logging.Level;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.inventory.ItemStack;
@@ -17,14 +22,24 @@ public class MobDeathListener implements Listener {
   private final MobClashPlugin plugin;
   private final MobTracker mobTracker;
   private final KillBoard killBoard;
+  private final LanguageManager langManager;
 
-  public MobDeathListener(MobClashPlugin plugin, MobTracker mobTracker, KillBoard killBoard) {
+  public MobDeathListener(
+      MobClashPlugin plugin,
+      MobTracker mobTracker,
+      KillBoard killBoard,
+      LanguageManager langManager) {
     this.plugin = plugin;
     this.mobTracker = mobTracker;
     this.killBoard = killBoard;
+    this.langManager = langManager;
   }
 
-  @EventHandler
+  /**
+   * HIGHEST so the drops are final before they move to the killer, and ignoreCancelled because a
+   * cancelled death on Paper revives the mob: it drops nothing and is not a kill.
+   */
+  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
   public void onMobDeath(EntityDeathEvent event) {
     // Check if this was a MobClash mob
     if (!mobTracker.isMobClashMob(event.getEntity())) {
@@ -51,10 +66,28 @@ public class MobDeathListener implements Listener {
     // Record the kill
     mobTracker.recordKill(killer);
     killBoard.refresh();
+    announceIfListed(killer, event);
 
     // Handle loot directly to inventory if configured
     if (plugin.getConfig().getBoolean("loot-to-inventory", false)) {
       handleLootToInventory(killer, event);
+    }
+  }
+
+  /**
+   * Tell every player in every world, and the console, when the mob is one announce-kills lists.
+   * Read at each kill so /mobclash reload applies an edit.
+   */
+  private void announceIfListed(Player killer, EntityDeathEvent event) {
+    NamespacedKey type = event.getEntityType().getKey();
+    boolean listed =
+        plugin.getConfig().getStringList("announce-kills").stream()
+            .anyMatch(name -> type.equals(NamespacedKey.fromString(name.toLowerCase(Locale.ROOT))));
+    if (listed) {
+      String message =
+          langManager.getMessage(
+              "kill-announcement", killer.getName(), event.getEntity().getName());
+      plugin.getServer().broadcast(LegacyComponentSerializer.legacySection().deserialize(message));
     }
   }
 

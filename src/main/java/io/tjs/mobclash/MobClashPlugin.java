@@ -6,10 +6,15 @@ import io.tjs.mobclash.managers.KillBoard;
 import io.tjs.mobclash.managers.LanguageManager;
 import io.tjs.mobclash.managers.MobTracker;
 import io.tjs.mobclash.managers.SpawnManager;
+import java.io.File;
+import java.io.IOException;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class MobClashPlugin extends JavaPlugin {
@@ -101,6 +106,40 @@ public class MobClashPlugin extends JavaPlugin {
     getLogger().info("Moved spawn and kill data out of config.yml into spawns.yml and kills.yml");
   }
 
+  /**
+   * Re-read config.yml and language.yml from disk. Spawn and kill data are left alone: the plugin
+   * owns those files and holds the live copy in memory.
+   *
+   * <p>Both files are parsed first and nothing changes unless both parse. Bukkit's own loaders log
+   * a broken file and fall back to the defaults, which would silently discard every setting and
+   * message.
+   *
+   * @throws InvalidConfigurationException whose message is the name of the file that does not parse
+   */
+  public void reloadSettings() throws InvalidConfigurationException {
+    for (String name : List.of("config.yml", "language.yml")) {
+      requireParses(new File(getDataFolder(), name));
+    }
+    reloadConfig();
+    loadLoggingLevel();
+    languageManager.reload();
+  }
+
+  /**
+   * Throw if the file exists and is not valid YAML, logging the parser's error. A missing file
+   * passes: reloading falls back to the bundled copy, as startup does.
+   */
+  static void requireParses(File file) throws InvalidConfigurationException {
+    if (!file.exists()) {
+      return;
+    }
+    try {
+      new YamlConfiguration().load(file);
+    } catch (IOException | InvalidConfigurationException e) {
+      throw new InvalidConfigurationException(file.getName(), e);
+    }
+  }
+
   private void loadLoggingLevel() {
     String levelStr = getConfig().getString("logging-level", "INFO").toUpperCase();
     try {
@@ -128,25 +167,46 @@ public class MobClashPlugin extends JavaPlugin {
 
     executors.forEach(
         (name, executor) -> {
-          PluginCommand command = getCommand(name);
-          // getCommand returns null for anything missing from plugin.yml; without this the
-          // failure is a bare NPE that does not say which command drifted.
+          PluginCommand command = declaredCommand(name);
           if (command == null) {
-            getLogger().severe("Command '" + name + "' is missing from plugin.yml, not registered");
             return;
           }
-          log(Level.INFO, "Registering command: " + name);
           command.setExecutor(executor);
           // Set here rather than in plugin.yml so it cannot drift from the node the executor
           // checks. Bukkit then hides the command from anyone who lacks it.
           command.setPermission(executor.getPermission());
         });
+
+    // /mobclash has no permission of its own: help lists only what the sender may run.
+    Map<String, BaseCommand> subcommands = new LinkedHashMap<>(executors);
+    subcommands.put("reload", new ReloadCommand(this, spawnManager, languageManager));
+    MobClashCommand root = new MobClashCommand(languageManager, subcommands);
+    PluginCommand command = declaredCommand("mobclash");
+    if (command != null) {
+      command.setExecutor(root);
+      command.setTabCompleter(root);
+    }
+  }
+
+  /**
+   * The plugin.yml command of that name, or null with a log line. getCommand returns null for
+   * anything missing from plugin.yml; without this the failure is a bare NPE that does not say
+   * which command drifted.
+   */
+  private PluginCommand declaredCommand(String name) {
+    PluginCommand command = getCommand(name);
+    if (command == null) {
+      getLogger().severe("Command '" + name + "' is missing from plugin.yml, not registered");
+    } else {
+      log(Level.INFO, "Registering command: " + name);
+    }
+    return command;
   }
 
   private void registerListeners() {
     getServer()
         .getPluginManager()
-        .registerEvents(new MobDeathListener(this, mobTracker, killBoard), this);
+        .registerEvents(new MobDeathListener(this, mobTracker, killBoard, languageManager), this);
     getServer().getPluginManager().registerEvents(killBoard, this);
   }
 

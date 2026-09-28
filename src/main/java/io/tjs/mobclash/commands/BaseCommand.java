@@ -69,6 +69,11 @@ public abstract class BaseCommand implements CommandExecutor {
     return execute(sender, args);
   }
 
+  /** Whether the sender may run this command, with the console and command block bypass. */
+  public boolean canUse(CommandSender sender) {
+    return hasPermissionOrBypass(sender, permission);
+  }
+
   /** The node that gates this command, for registration to hand to Bukkit. */
   public String getPermission() {
     return permission;

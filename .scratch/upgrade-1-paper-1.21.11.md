@@ -25,7 +25,7 @@ The API surface this plugin touches is small, and the riskiest single change is 
       `google-java-format` before touching any source, so formatting noise stays out of the
       real diff.
 - [ ] A test server running Paper 1.21.11, with a copy of a real `spawns.yml`/`kills.yml`.
-      Server: `~/mcserver/mcs new mobclash --version 1.21.11` (Purpur, not Paper). Still open:
+      Server: `~/mc/mcserver/mcs new mobclash --version 1.21.11` (Purpur, not Paper). Still open:
       no real `spawns.yml`/`kills.yml` copied in yet.
 - [x] Branch `upgrade/paper-1.21.11` off `main` at v1.2.0.
 
@@ -59,7 +59,7 @@ The API surface this plugin touches is small, and the riskiest single change is 
 - [x] Add a test asserting the key's exact namespace and value, so the constant cannot drift.
 - [x] On the test server: spawn mobs on v1.2.0, upgrade the jar in place, kill them, confirm
       the kills still count. This is the check that proves the tag survived.
-      Done 2026-09-22 on Purpur 1.21.11 via `~/mcserver`: v1.2.0 built from its tag tagged 3 pigs
+      Done 2026-09-22 on Purpur 1.21.11 via `~/mc/mcserver`: v1.2.0 built from its tag tagged 3 pigs
       `mobclash:mobclash_spawned`, one kill counted, jar swapped to `f5d6488` in place, the
       other two killed by a mineflayer player, count 1 -> 3. Not tested: mobs tagged on a 1.20.4
       server, which is where the old key derivation actually differed.

@@ -14,10 +14,11 @@ public class LanguageManager {
 
   public LanguageManager(JavaPlugin plugin) {
     this.plugin = plugin;
-    loadLanguageFile();
+    reload();
   }
 
-  private void loadLanguageFile() {
+  /** Re-read language.yml from the data folder, writing the bundled copy first if it is missing. */
+  public void reload() {
     File langFile = new File(plugin.getDataFolder(), "language.yml");
     if (!langFile.exists()) {
       plugin.saveResource("language.yml", false);

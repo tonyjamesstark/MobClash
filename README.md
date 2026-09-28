@@ -8,9 +8,14 @@ spawn eggs for each wave, then summon a wave by command or command block.
 - 🎯 **Spawn groups** - any number of groups, each with many spawn points
 - 🌊 **Waves** - one chest of spawn eggs per wave, weighted by egg count
 - 🎲 **Two modes** - scatter mobs over random points, or spawn at every point
+- ⚔️ **Random equipment** - near-vanilla armor and weapons from `config.yml` or a chest of gear,
+  never dropped
 - 📊 **Kill tracking** - `/kills` leaderboard and an optional sidebar
+- 📣 **Boss kill announcements** - the whole server hears who killed a wither or warden
+- 🧭 **One command** - `/mobclash help` lists every command you can use
 - 🤖 **Command blocks** - run every command except `/setchest`, with no permissions needed
 - 🌍 **Translatable** - every message lives in `language.yml`
+- 🔄 **Reload** - `/mobclash reload` applies `config.yml` and `language.yml` edits without a restart
 
 ## Requirements
 
@@ -18,7 +23,7 @@ Paper 1.21.11 (or a fork) on Java 21. For 1.20.x, use the v1.2.0 jar.
 
 ## Install
 
-1. Download `mobclash-2.0.0.jar` from releases.
+1. Download `mobclash-2.1.0.jar` from releases.
 2. Put it in `plugins/` and restart the server.
 
 ## Quick start
@@ -26,17 +31,21 @@ Paper 1.21.11 (or a fork) on Java 21. For 1.20.x, use the v1.2.0 jar.
 ```
 /addspawn arena                     # at each spot mobs should appear
 /setchest arena wave1               # while looking at a chest of spawn eggs
+/mobclash help                      # the commands you can use
 /summonmobs arena wave1 random 5    # 5 mobs, each at a random point
 /summonmobs arena wave1 all 3       # 3 mobs at every point
+/summonmobs arena wave1 all 3 true  # the same, with random armor and weapons
 /killboard                          # show the kill leaderboard in your sidebar
 ```
 
 ## Documentation
 
-- [Commands](docs/commands.md) - every command, summoning modes, kills, the sidebar
+- [Commands](docs/commands.md) - every command, summoning modes, random equipment, kills, the
+  sidebar
 - [Permissions](docs/permissions.md) - nodes and defaults
-- [Configuration](docs/configuration.md) - `config.yml`, data files, `language.yml`
-- [Examples](docs/examples.md) - timed waves, boss fights, ambushes, kill races
+- [Configuration](docs/configuration.md) - `config.yml` including equipment lists and kill
+  announcements, data files, `language.yml`
+- [Examples](docs/examples.md) - timed waves, boss fights, armed waves, ambushes, kill races
 - [Troubleshooting](docs/troubleshooting.md)
 - [Development](docs/development.md) - building and testing
 - [Changelog](CHANGELOG.md)

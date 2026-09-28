@@ -18,6 +18,38 @@ loot-to-inventory: false
 # Set to 0 to disable the cap.
 max-mobs-per-summon: 500
 
+# Mobs whose death is announced to every player on the server, in every world, when a player
+# kills one that MobClash summoned. Names as in /summon, with or without "minecraft:".
+# An empty list, [], turns announcements off.
+announce-kills: [wither, warden]
+
+# Gear for /summonmobs ... true. Zombies, husks and zombie villagers draw armor and weapons;
+# skeletons, strays, bogged and parched draw armor and always hold a bow. The odds are vanilla's
+# on hard difficulty: 15% of mobs get armor, 5% of zombies a weapon. Passing the name of a chest
+# set with /setchest instead of true draws from that chest's contents, and ignores the two
+# lists below. Nothing a summoned mob wears or holds drops.
+random-equipment:
+  # Armor materials, weakest first. Most mobs that get armor draw the first two; each step up
+  # is rarer. Any material with armor pieces works: leather, copper, golden, chainmail, iron,
+  # diamond, netherite.
+  armor: [leather, copper, golden, iron]
+  # Zombie weapons and their relative weights. One sword to two shovels is vanilla's split;
+  # axes are an addition, as likely as swords.
+  weapons:
+    copper_sword: 1
+    iron_sword: 1
+    golden_sword: 1
+    copper_shovel: 2
+    iron_shovel: 2
+    golden_shovel: 2
+    copper_axe: 1
+    iron_axe: 1
+    golden_axe: 1
+  # Highest enchantment level a piece can get. Half of armor pieces get Protection and a
+  # quarter of swords and axes Sharpness, at a level from 1 to this. 0 turns it off.
+  max-protection: 4
+  max-sharpness: 5
+
 # This file holds settings only. Spawn groups and chest locations live in spawns.yml, and kill
 # counts in kills.yml, both written by the plugin as commands run. Nothing the plugin writes
-# lands here, so editing this file on a running server is safe -- reload to pick it up.
+# lands here, so editing this file on a running server is safe -- /mobclash reload picks it up.

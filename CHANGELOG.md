@@ -1,5 +1,28 @@
 # Changelog
 
+## v2.1.0
+
+- `/summonmobs` takes an optional last argument for random equipment: `true` for the lists in
+  the new `random-equipment` section of `config.yml`, or the name of a chest set with
+  `/setchest` to draw from that chest. Near-vanilla odds, Protection and Sharpness up to the
+  configured levels, skeletons always hold a bow, and none of it drops. An existing
+  `language.yml` keeps its old `summonmobs-usage` line until you delete that key.
+- `/mobclash <command>` runs any MobClash command, and `/mobclash help` lists the ones you
+  may use, with tab completion. The standalone commands such as `/summonmobs` still work.
+- A player's kill of a summoned wither or warden is announced to the whole server. The
+  `announce-kills` list in `config.yml` sets which mobs; `[]` turns it off.
+- The deprecated `mobspawner.*` permission nodes are gone. Grant the matching `mobclash.*`
+  nodes instead; see [permissions.md](docs/permissions.md).
+- `/mobclash reload` re-reads `config.yml` and `language.yml` without restarting the server.
+  Needs `mobclash.reload`, default op. A file with a syntax error stops the reload and is named.
+- Spawn eggs with `entity_data` (attributes, health, `DeathLootTable`, `PersistenceRequired`)
+  now summon the mob they describe. Before, only the mob type was used. Such mobs get no random
+  spawn gear, and gear the egg gives never drops.
+- Eggs whose `entity_data` is not a mob, has riders or fixes a `UUID` are skipped with a warning
+  to the console and the summoner. So is an egg with no matching mob, which only logged before.
+- A death cancelled by a plugin listening before MobClash's `HIGHEST` handler (a revive) no
+  longer counts as a kill or hands its drops to the killer under `loot-to-inventory`.
+
 ## v2.0.0
 
 - Requires Paper 1.21.11 and Java 21. Mobs spawned under 1.2.0 keep counting towards kills.

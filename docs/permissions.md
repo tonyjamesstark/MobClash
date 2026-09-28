@@ -14,9 +14,9 @@
 | `mobclash.kills.resetall` | `/kills resetall` | op |
 | `mobclash.killboard` | `/killboard` for yourself | everyone |
 | `mobclash.killboard.admin` | `/killboard world` and `/killboard alloff` | op |
+| `mobclash.reload` | `/mobclash reload` | op |
 
-A command is hidden from players who lack its permission. Command blocks and the console run
-everything.
-
-The old `mobspawner.*` nodes still work. Each is a parent of the matching `mobclash.*` node and
-defaults to `false`. New grants should use `mobclash.*`.
+Each node covers both forms of its command: `mobclash.summon` grants `/summonmobs` and
+`/mobclash summonmobs`. A command is hidden from players who lack its permission. `/mobclash`
+itself needs none: its help and tab completion show only the commands the player may run.
+Command blocks and the console run everything.

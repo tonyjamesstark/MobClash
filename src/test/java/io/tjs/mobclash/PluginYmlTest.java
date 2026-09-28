@@ -96,19 +96,6 @@ class PluginYmlTest {
 
   @Test
   @SuppressWarnings("unchecked")
-  void theDeprecatedNamespaceStillGrantsTheNewNodes() throws IOException {
-    Map<String, Object> permissions = section("permissions");
-    for (String node : nodesUsedInCode()) {
-      String legacy = node.replace("mobclash.", "mobspawner.");
-      Map<String, Object> alias = (Map<String, Object>) permissions.get(legacy);
-      assertNotNull(alias, "no backward-compatible alias declared for " + node);
-      Set<String> children = ((Map<String, Object>) alias.get("children")).keySet();
-      assertTrue(children.contains(node), legacy + " does not grant " + node);
-    }
-  }
-
-  @Test
-  @SuppressWarnings("unchecked")
   void everyCommandHelpEntryIsUsableAsBukkitRendersIt() throws IOException {
     // /help renders description and usage straight from here, and substitutes <command> with the
     // label the sender typed. A hardcoded name prints the wrong one under the plugin-qualified
@@ -138,5 +125,21 @@ class PluginYmlTest {
         declared.stream().filter(name -> !source.contains("\"" + name + "\"")).toList();
     assertTrue(
         unregistered.isEmpty(), "declared in plugin.yml but never registered: " + unregistered);
+  }
+
+  @Test
+  void everyCommandHasALineInMobclashHelp() throws IOException {
+    // /mobclash help looks up help-<name> for each subcommand; a missing key prints "Missing
+    // translation" to every player.
+    Map<String, Object> language;
+    try (InputStream in = getClass().getResourceAsStream("/language.yml")) {
+      language = new Yaml().load(in);
+    }
+    Set<String> subcommands = new TreeSet<>(section("commands").keySet());
+    subcommands.remove("mobclash");
+    subcommands.add("reload");
+    List<String> missing =
+        subcommands.stream().filter(name -> !language.containsKey("help-" + name)).toList();
+    assertTrue(missing.isEmpty(), "no help line in language.yml for: " + missing);
   }
 }
