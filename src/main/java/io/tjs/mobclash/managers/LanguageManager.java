@@ -19,7 +19,8 @@ public class LanguageManager {
    * language.yml's migration steps, see {@link FileFormat#upgrade}. 0 to 1, in 2.2.0: usage and
    * help text moved to plugin.yml, so the server's copy of the old lines is dead text; {@code
    * chest-missing} gained the chest's name and place, which the old line has no placeholders for;
-   * and {@code setchest-success} says "Chest", since it also sets gear chests.
+   * and {@code setchest-success} says "Chest", since it also sets gear chests. 1 to 2, in 2.2.1:
+   * {@code must-look-chest} names barrels and shulker boxes, which a wave or gear chest may now be.
    */
   public static final List<Consumer<ConfigurationSection>> FORMAT =
       List.of(
@@ -28,7 +29,8 @@ public class LanguageManager {
                   key.endsWith("-usage")
                       || key.startsWith("help-")
                       || key.equals("chest-missing")
-                      || key.equals("setchest-success")));
+                      || key.equals("setchest-success")),
+          FileFormat.removeKeys(key -> key.equals("must-look-chest")));
 
   private final JavaPlugin plugin;
   private FileConfiguration langConfig;

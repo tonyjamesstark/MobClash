@@ -23,7 +23,7 @@ Paper 1.21.11 (or a fork) on Java 21. For 1.20.x, use the v1.2.0 jar.
 
 ## Install
 
-1. Download `mobclash-2.2.0.jar` from releases.
+1. Download `mobclash-2.2.1.jar` from releases.
 2. Put it in `plugins/` and restart the server.
 
 ## Quick start

@@ -19,8 +19,10 @@ import java.util.Set;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.block.Barrel;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
+import org.bukkit.block.Container;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.inventory.Inventory;
@@ -79,13 +81,18 @@ class ListChestsCommandTest {
 
   /** The chest block at loc. Location.getBlock() resolves through the world, so stub there. */
   private void givenChestHolding(Location loc, ItemStack... contents) {
+    givenBlockHolding(loc, Material.CHEST, Chest.class, contents);
+  }
+
+  private void givenBlockHolding(
+      Location loc, Material type, Class<? extends Container> state, ItemStack... contents) {
     Block block = mock(Block.class);
-    Chest chest = mock(Chest.class);
+    Container container = mock(state);
     Inventory inventory = mock(Inventory.class);
     when(world.getBlockAt(loc)).thenReturn(block);
-    when(block.getType()).thenReturn(Material.CHEST);
-    when(block.getState()).thenReturn(chest);
-    when(chest.getInventory()).thenReturn(inventory);
+    when(block.getType()).thenReturn(type);
+    when(block.getState()).thenReturn(container);
+    when(container.getInventory()).thenReturn(inventory);
     when(inventory.getContents()).thenReturn(contents);
   }
 
@@ -114,6 +121,24 @@ class ListChestsCommandTest {
     order.verify(sender).sendMessage("listchests-header[1]");
     order.verify(sender).sendMessage("listchests-entry[group1, wave1, world, 100, 64, 101, 8, 18]");
     order.verifyNoMoreInteractions();
+  }
+
+  @Test
+  void aBarrelsEggsAreCounted() {
+    Location loc = new Location(world, 7, 64, 7);
+    givenBlockHolding(
+        loc,
+        Material.BARREL,
+        Barrel.class,
+        itemOf(Material.ZOMBIE_SPAWN_EGG, 4),
+        itemOf(Material.DIAMOND, 1));
+    when(world.getName()).thenReturn("world");
+    when(spawnManager.getChestGroups()).thenReturn(Set.of("group1"));
+    when(spawnManager.getGroupWaves("group1")).thenReturn(Map.of("wave1", loc));
+
+    assertTrue(run());
+
+    verify(sender).sendMessage("listchests-entry[group1, wave1, world, 7, 64, 7, 4, 5]");
   }
 
   @Test

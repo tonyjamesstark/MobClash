@@ -25,8 +25,12 @@ import java.util.logging.Level;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.block.Barrel;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
+import org.bukkit.block.Container;
+import org.bukkit.block.Hopper;
+import org.bukkit.block.ShulkerBox;
 import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.Command;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -68,7 +72,6 @@ class SummonMobsCommandTest {
   @Mock private Command command;
   @Mock private World world;
   @Mock private Block block;
-  @Mock private Chest chest;
   @Mock private Inventory inventory;
   @Mock private Block commandBlockBlock;
 
@@ -126,10 +129,17 @@ class SummonMobsCommandTest {
 
   /** The chest block at chestLoc. Location.getBlock() resolves through the world, so stub there. */
   private void givenChestHolding(ItemStack... contents) {
+    givenBlockHolding(Material.CHEST, Chest.class, contents);
+  }
+
+  /** A block of this type at chestLoc, with the state the server gives it, holding contents. */
+  private void givenBlockHolding(
+      Material type, Class<? extends Container> state, ItemStack... contents) {
+    Container container = mock(state);
     when(world.getBlockAt(chestLoc)).thenReturn(block);
-    when(block.getType()).thenReturn(Material.CHEST);
-    when(block.getState()).thenReturn(chest);
-    when(chest.getInventory()).thenReturn(inventory);
+    when(block.getType()).thenReturn(type);
+    when(block.getState()).thenReturn(container);
+    when(container.getInventory()).thenReturn(inventory);
     when(inventory.getContents()).thenReturn(contents);
   }
 
@@ -425,13 +435,18 @@ class SummonMobsCommandTest {
 
   /** A second chest in the group, set with /setchest test-group gear, holding the given items. */
   private void givenGearChestHolding(ItemStack... contents) {
+    givenGearBlockHolding(Material.CHEST, Chest.class, contents);
+  }
+
+  private void givenGearBlockHolding(
+      Material type, Class<? extends Container> state, ItemStack... contents) {
     Location gearLoc = new Location(world, 60, 64, 60);
     Block gearBlock = mock(Block.class);
-    Chest gearChest = mock(Chest.class);
+    Container gearChest = mock(state);
     Inventory gearInventory = mock(Inventory.class);
     when(spawnManager.getGroupChest("test-group", "gear")).thenReturn(gearLoc);
     when(world.getBlockAt(gearLoc)).thenReturn(gearBlock);
-    when(gearBlock.getType()).thenReturn(Material.CHEST);
+    when(gearBlock.getType()).thenReturn(type);
     when(gearBlock.getState()).thenReturn(gearChest);
     when(gearChest.getInventory()).thenReturn(gearInventory);
     when(gearInventory.getContents()).thenReturn(contents);
@@ -522,6 +537,84 @@ class SummonMobsCommandTest {
             "chest-missing", "test-group", "wave1", Material.STONE, "test-world", 50, 64, 50);
     verify(player).sendMessage("chest-missing");
     verify(world, never()).spawnEntity(any(Location.class), any(EntityType.class));
+  }
+
+  @Test
+  void aBarrelIsSummonedFrom() {
+    givenGroup("test-group", "wave1", List.of(spawnLoc));
+    givenCapOf(500);
+    givenBlockHolding(Material.BARREL, Barrel.class, itemOf(Material.ZOMBIE_SPAWN_EGG, 1));
+    givenSpawnOf(EntityType.ZOMBIE, true);
+
+    assertTrue(run(player, "test-group", "wave1", "all", "2"));
+
+    verify(world, times(2)).spawnEntity(spawnLoc, EntityType.ZOMBIE);
+    verify(player).sendMessage("summonmobs-success");
+  }
+
+  @Test
+  void aShulkerBoxIsSummonedFrom() {
+    givenGroup("test-group", "wave1", List.of(spawnLoc));
+    givenCapOf(500);
+    givenBlockHolding(
+        Material.RED_SHULKER_BOX, ShulkerBox.class, itemOf(Material.ZOMBIE_SPAWN_EGG, 1));
+    givenSpawnOf(EntityType.ZOMBIE, true);
+
+    assertTrue(run(player, "test-group", "wave1", "all", "2"));
+
+    verify(world, times(2)).spawnEntity(spawnLoc, EntityType.ZOMBIE);
+    verify(player).sendMessage("summonmobs-success");
+  }
+
+  @Test
+  void aShulkerBoxServesAsAGearChest() {
+    givenGroup("test-group", "wave1", List.of(spawnLoc));
+    givenCapOf(500);
+    givenChestHolding(itemOf(Material.ZOMBIE_SPAWN_EGG, 1));
+    givenGearBlockHolding(Material.SHULKER_BOX, ShulkerBox.class);
+    EntityEquipment equipment = givenEquippableZombie();
+
+    assertTrue(run(player, "test-group", "wave1", "all", "gear"));
+
+    verify(equipment).setItem(EquipmentSlot.HEAD, null);
+    verify(mobTracker).tagMob(any(), eq("test-group"), eq("wave1"));
+  }
+
+  /**
+   * The block at chestLoc is a container MobClash does not accept. Its state is lenient because the
+   * rule must not read it: a trapped or copper chest has a Chest state, so a rule that went by the
+   * state would summon from it and fail this.
+   */
+  private void assertReportedMissing(Material type, Class<? extends Container> state) {
+    givenGroup("test-group", "wave1", List.of(spawnLoc));
+    givenCapOf(500);
+    Container container = mock(state);
+    when(world.getBlockAt(chestLoc)).thenReturn(block);
+    when(block.getType()).thenReturn(type);
+    lenient().when(block.getState()).thenReturn(container);
+    lenient().when(container.getInventory()).thenReturn(inventory);
+
+    assertTrue(run(player, "test-group", "wave1", "random"));
+
+    verify(langManager)
+        .getMessage("chest-missing", "test-group", "wave1", type, "test-world", 50, 64, 50);
+    verify(player).sendMessage("chest-missing");
+    verify(world, never()).spawnEntity(any(Location.class), any(EntityType.class));
+  }
+
+  @Test
+  void aTrappedChestIsReportedMissing() {
+    assertReportedMissing(Material.TRAPPED_CHEST, Chest.class);
+  }
+
+  @Test
+  void aCopperChestIsReportedMissing() {
+    assertReportedMissing(Material.COPPER_CHEST, Chest.class);
+  }
+
+  @Test
+  void aHopperIsReportedMissing() {
+    assertReportedMissing(Material.HOPPER, Hopper.class);
   }
 
   @Test

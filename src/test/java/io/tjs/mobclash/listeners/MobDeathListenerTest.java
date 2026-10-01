@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.bukkit.Material;
 import org.bukkit.Server;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.EntityType;
@@ -94,6 +95,68 @@ class MobDeathListenerTest {
 
     assertEquals(List.of(leftover), drops);
     verify(mobTracker).recordKill(killer);
+  }
+
+  private ItemStack netherStar() {
+    ItemStack star = stackOf(1);
+    when(star.getType()).thenReturn(Material.NETHER_STAR);
+    return star;
+  }
+
+  @Test
+  void aSummonedWithersNetherStarGoesNeitherToTheKillerNorToTheGround() {
+    when(event.getEntityType()).thenReturn(EntityType.WITHER);
+    when(config.getBoolean("loot-to-inventory", false)).thenReturn(true);
+    ItemStack star = netherStar();
+    ItemStack token = stackOf(1);
+    drops.addAll(List.of(star, token));
+    when(inventory.addItem(token)).thenReturn(new HashMap<>());
+
+    listener.onMobDeath(event);
+
+    assertEquals(List.of(), drops);
+    verify(inventory, never()).addItem(star);
+    verify(mobTracker).recordKill(killer);
+  }
+
+  @Test
+  void withLootToInventoryOffASummonedWitherStillDropsNoStar() {
+    when(event.getEntityType()).thenReturn(EntityType.WITHER);
+    when(config.getBoolean("loot-to-inventory", false)).thenReturn(false);
+    ItemStack star = netherStar();
+    ItemStack token = stackOf(1);
+    drops.addAll(List.of(star, token));
+
+    listener.onMobDeath(event);
+
+    assertEquals(List.of(token), drops);
+    verifyNoInteractions(inventory);
+  }
+
+  @Test
+  void aSummonedWitherThatNoPlayerKilledLeavesNoStarBehind() {
+    when(event.getEntityType()).thenReturn(EntityType.WITHER);
+    when(mob.getKiller()).thenReturn(null);
+    ItemStack star = netherStar();
+    ItemStack token = stackOf(1);
+    drops.addAll(List.of(star, token));
+
+    listener.onMobDeath(event);
+
+    assertEquals(List.of(token), drops);
+  }
+
+  @Test
+  void aWitherMobClashDidNotSummonKeepsItsStar() {
+    when(mobTracker.isMobClashMob(mob)).thenReturn(false);
+    lenient().when(event.getEntityType()).thenReturn(EntityType.WITHER);
+    ItemStack star = stackOf(1);
+    lenient().when(star.getType()).thenReturn(Material.NETHER_STAR);
+    drops.add(star);
+
+    listener.onMobDeath(event);
+
+    assertEquals(List.of(star), drops);
   }
 
   @Test

@@ -9,7 +9,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.logging.Level;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -44,6 +46,12 @@ public class MobDeathListener implements Listener {
     // Check if this was a MobClash mob
     if (!mobTracker.isMobClashMob(event.getEntity())) {
       return;
+    }
+
+    // The wither drops its nether star in code, past any DeathLootTable the egg sets, and keeps
+    // it from despawning for ten minutes. A summoned wither drops none, whoever kills it.
+    if (event.getEntityType() == EntityType.WITHER) {
+      event.getDrops().removeIf(drop -> drop.getType() == Material.NETHER_STAR);
     }
 
     // Check if killed by a player

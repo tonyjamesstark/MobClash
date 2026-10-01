@@ -14,7 +14,7 @@ blocks use.
 | `/mobclash listgroups` | List groups and their point counts | `mobclash.listgroups` |
 | `/mobclash listspawns <group>` | List a group's point coordinates | `mobclash.listspawns` |
 | `/mobclash showspawns <group>` | Flash a particle marker at each point | `mobclash.showspawns` |
-| `/mobclash setchest <group> <wave>` | Use the chest you are looking at as a wave's egg pool, or as a gear chest | `mobclash.setchest` |
+| `/mobclash setchest <group> <wave>` | Use the chest, barrel or shulker box you are looking at as a wave's egg pool, or as a gear chest | `mobclash.setchest` |
 | `/mobclash listchests [group]` | List chests set with `/setchest`, whether they're still there, and their eggs | `mobclash.listchests` |
 | `/mobclash removechest <group> <chest>` | Forget a chest set with `/setchest`; the block stays | `mobclash.removechest` |
 | `/mobclash summonmobs <group> <wave> <random\|all> [amount] [true\|false\|<gear chest>]` | Summon mobs from a wave, optionally with random equipment | `mobclash.summon` |
@@ -30,6 +30,14 @@ standalone, because `/version` is the server's own command.
 
 `/mobclash reload` re-reads both files without restarting the server.
 It leaves `spawns.yml` and `kills.yml` alone: the plugin writes those itself.
+
+## Chests
+
+A wave chest or gear chest is the block you look at when you run `/setchest`. It can be a
+chest, a barrel, or a shulker box of any colour. A double chest counts as one chest with both
+halves. Trapped chests and copper chests are not accepted. Hoppers, droppers, dispensers,
+furnaces and crafters are not accepted either, because they move or use the items in them.
+`/setchest` refuses any other block. The rest of this page calls all three kinds a chest.
 
 ## Summoning
 
@@ -115,10 +123,11 @@ total items are in it.
 
 - Without a group, every group that has a chest is shown; a group with spawn points but no
   chest set is left out. With a group, an unknown name gives the same error as `/listspawns`.
-- A chest that is still a `CHEST` block shows its spawn egg count (items whose type ends in
-  `_spawn_egg`, summed by stack amount) and its total item count.
-- A chest that is no longer a `CHEST` block -- broken, replaced, or never placed where
-  `/setchest` recorded it -- shows the block type found there instead.
+- A chest that is still a chest, barrel or shulker box shows its spawn egg count (items whose
+  type ends in `_spawn_egg`, summed by stack amount) and its total item count.
+- A chest that was broken, replaced by another block, or never placed where `/setchest`
+  recorded it shows the block type found there instead. A trapped chest, a copper chest or a
+  hopper shows up this way too.
 - Output is sorted by group, then chest name. A wave chest and a gear chest are the same thing
   internally, so both are listed the same way.
 

@@ -4,16 +4,22 @@ import io.tjs.mobclash.MobClashPlugin;
 import io.tjs.mobclash.managers.LanguageManager;
 import io.tjs.mobclash.managers.SpawnManager;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.block.Container;
 import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
 
 public abstract class BaseCommand implements CommandExecutor {
 
@@ -25,6 +31,30 @@ public abstract class BaseCommand implements CommandExecutor {
   private String usage = "";
 
   private static final String COMMAND = "/<command>";
+
+  // Listed rather than read from Tag.SHULKER_BOXES, which resolves through the running server and
+  // so cannot load in a unit test.
+  private static final Set<Material> CHEST_BLOCKS =
+      EnumSet.of(
+          Material.CHEST,
+          Material.BARREL,
+          Material.SHULKER_BOX,
+          Material.WHITE_SHULKER_BOX,
+          Material.ORANGE_SHULKER_BOX,
+          Material.MAGENTA_SHULKER_BOX,
+          Material.LIGHT_BLUE_SHULKER_BOX,
+          Material.YELLOW_SHULKER_BOX,
+          Material.LIME_SHULKER_BOX,
+          Material.PINK_SHULKER_BOX,
+          Material.GRAY_SHULKER_BOX,
+          Material.LIGHT_GRAY_SHULKER_BOX,
+          Material.CYAN_SHULKER_BOX,
+          Material.PURPLE_SHULKER_BOX,
+          Material.BLUE_SHULKER_BOX,
+          Material.BROWN_SHULKER_BOX,
+          Material.GREEN_SHULKER_BOX,
+          Material.RED_SHULKER_BOX,
+          Material.BLACK_SHULKER_BOX);
 
   public BaseCommand(
       MobClashPlugin plugin,
@@ -127,6 +157,19 @@ public abstract class BaseCommand implements CommandExecutor {
       return block.getBlock().getLocation();
     }
     return null;
+  }
+
+  /**
+   * The inventory of a block that can be a wave or gear chest, or null for any other block. A plain
+   * chest, a barrel and a shulker box of any colour count, since they only hold items. Hoppers,
+   * droppers, dispensers, furnaces and crafters are containers too, but they move or use what is in
+   * them. Trapped and copper chests are refused as well, and Bukkit gives both a Chest state, so
+   * the rule reads the block's material rather than its state. A double chest yields both halves.
+   */
+  protected static Inventory chestInventory(Block block) {
+    return CHEST_BLOCKS.contains(block.getType())
+        ? ((Container) block.getState()).getInventory()
+        : null;
   }
 
   /**

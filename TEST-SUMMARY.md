@@ -2,8 +2,8 @@
 
 ## Test Coverage Overview
 
-**Total Test Files:** 24
-**Total Test Cases:** 227 (219 unit, run by `mvn test`; 8 integration, run only by `mvn verify`)
+**Total Test Files:** 25
+**Total Test Cases:** 248 (240 unit, run by `mvn test`; 8 integration, run only by `mvn verify`)
 **Package:** `io.tjs.mobclash`
 
 > Counts here are maintained by hand and have drifted before. Treat the surefire/failsafe output
@@ -56,7 +56,7 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 
 ---
 
-### 3. LanguageManagerTest.java (10 tests)
+### 3. LanguageManagerTest.java (12 tests)
 **Location:** `src/test/java/io/tjs/mobclash/managers/`
 
 ✅ `testGetMessageSimple` - Basic message retrieval
@@ -64,7 +64,9 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 ✅ `testGetMessageWithMultiplePlaceholders` - Multiple placeholder replacement
 ✅ `testGetMessageMissingKey` - Missing translation handling
 ✅ `aKeyMissingFromAnOlderCopyFallsBackToTheBundledOne` - an upgraded server's old file still gets new keys
-✅ `anUnversionedCopyLosesTheUsageTextThatMovedToPluginYml` - the format 0 to 1 step, including the old `chest-missing` and `setchest-success` lines
+✅ `anUnversionedCopyRunsEveryStep` - format 0 to 2: the usage and help lines, and the old `chest-missing`, `setchest-success` and `must-look-chest` lines
+✅ `aFormat1CopyLosesOnlyTheOldMustLookChestLine` - the format 1 to 2 step alone, and the new `must-look-chest` text
+✅ `theBundledCopyIsAtTheCurrentFormat` - the jar's `language.yml` carries the number of steps, so a fresh install runs none
 ✅ `anUpgradedCopyNamesTheMissingChestWithTheBundledText` - the new `chest-missing` text and its placeholders
 ✅ `aLocallyEditedMessageWinsOverTheBundledOne` - the data-folder copy takes priority
 ✅ `reloadPicksUpAnEditMadeOnDisk` - `/mobclash reload` rereads the file
@@ -138,7 +140,7 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 
 ---
 
-### 7. SummonMobsCommandTest.java (29 tests)
+### 7. SummonMobsCommandTest.java (35 tests)
 **Location:** `src/test/java/io/tjs/mobclash/commands/`
 
 ✅ `randomModeSpreadsTheRequestedCountOverThePoints` - Random spawn mode
@@ -159,6 +161,8 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 ✅ `aGearChestThatIsNoLongerThereIsReported` - names the group, chest, block found, world and position
 ✅ `aSummonOverTheTotalCapIsRefused` - amount x points against max-mobs-per-summon
 ✅ `aChestThatIsNoLongerThereIsReported` - the same detail for the wave chest / `aChestWithNoSpawnEggsIsReported`
+✅ `aBarrelIsSummonedFrom` / `aShulkerBoxIsSummonedFrom` / `aShulkerBoxServesAsAGearChest`
+✅ `aTrappedChestIsReportedMissing` / `aCopperChestIsReportedMissing` / `aHopperIsReportedMissing` - by material, though a trapped or copper chest has a Chest state
 ✅ `aPlayerWithoutThePermissionIsRefused` - Permission denial
 
 **Key Features Tested:**
@@ -266,7 +270,7 @@ each with a fixed seed.
 
 ---
 
-### 15. MobDeathListenerTest.java (10 tests)
+### 15. MobDeathListenerTest.java (14 tests)
 **Location:** `src/test/java/io/tjs/mobclash/listeners/`
 
 ✅ `lootGoesToTheKillerAndOnlyWhatDoesNotFitStaysOnTheGround`
@@ -279,13 +283,17 @@ each with a fixed seed.
 ✅ `aMobMissingFromTheListIsNotAnnounced`
 ✅ `aListedMobMobClashDidNotSummonIsNotAnnounced`
 ✅ `theHandlerSkipsCancelledDeathsAndRunsAfterOtherPlugins`
+✅ `aSummonedWithersNetherStarGoesNeitherToTheKillerNorToTheGround`
+✅ `withLootToInventoryOffASummonedWitherStillDropsNoStar`
+✅ `aSummonedWitherThatNoPlayerKilledLeavesNoStarBehind`
+✅ `aWitherMobClashDidNotSummonKeepsItsStar`
 
 ---
 
-### 15a. ListChestsCommandTest.java (9 tests)
+### 15a. ListChestsCommandTest.java (10 tests)
 **Location:** `src/test/java/io/tjs/mobclash/commands/`
 
-✅ A present chest with its egg and item counts, a missing chest naming the block found, a chest whose world was unloaded, the group
+✅ A present chest with its egg and item counts, a barrel's egg and item counts, a missing chest naming the block found, a chest whose world was unloaded, the group
 filter, an unknown group, no chests at all, sort order, extra arguments, permission refusal
 
 ### 15b. VersionCommandTest.java (2 tests)
@@ -320,6 +328,14 @@ unknown group, a second argument other than `confirm`, permission refusal.
 ✅ Without a group, the count removed is reported; with one, the group and its count; an extra
 argument prints the usage and removes nothing; permission refusal. Which mobs go is covered in
 MobTrackerTest.
+
+### 15g. SetChestCommandTest.java (8 tests)
+**Location:** `src/test/java/io/tjs/mobclash/commands/`
+
+✅ A chest, a barrel, a dyed shulker box and an undyed one are set. A trapped chest, a copper
+chest and a hopper are refused with `must-look-chest`, each with the state the server gives it,
+so a rule that went by the state would fail. An unknown group is reported before the target
+block is read.
 
 ## Integration Tests
 
@@ -405,10 +421,10 @@ mvn clean test jacoco:report
 |-----------|-------|----------|
 | SpawnManager (behaviour) | 20 | ✅ High |
 | SpawnManager (persistence round trip) | 6 | ✅ High |
-| LanguageManager | 10 | ✅ High |
+| LanguageManager | 12 | ✅ High |
 | MobTracker | 14 | ✅ High |
 | RandomEquipment (draw and config) | 11 | ✅ High; the equip step was tested live |
-| Commands | 104 | ⚠️ Partial — `KillsCommand` has no tests |
+| Commands | 119 | ⚠️ Partial — `KillsCommand` has no tests |
 | Listeners | 10 | ✅ `MobDeathListener` |
 | Integration | 8 | ⚠️ Manager-level only; no command, listener or lifecycle coverage |
 
@@ -481,8 +497,8 @@ void testFeatureName() {
 - `MobDeathListenerTest`: drops move to the killer and only what does not fit stays on the
   ground; a killer who has logged out or died gets nothing and the drops stay, but the kill
   counts; the setting off leaves drops alone; non-MobClash mobs and non-player kills are skipped
-  with their drops untouched;
-  the handler is registered to skip cancelled deaths (Bukkit enforces that, so only the flags are
+  with their drops untouched; a summoned wither's nether star is removed whoever kills it and
+  whatever the setting, while a vanilla wither keeps it; the handler is registered to skip cancelled deaths (Bukkit enforces that, so only the flags are
   pinned). The loot table itself runs in the server, not here; smoke-tested live instead.
 
 ---
@@ -513,6 +529,7 @@ void testFeatureName() {
 - [x] RemoveChestCommandTest.java
 - [x] RemoveGroupCommandTest.java
 - [x] KillMobsCommandTest.java
+- [x] SetChestCommandTest.java
 - [ ] KillsCommandTest.java (can be added)
 
 ---

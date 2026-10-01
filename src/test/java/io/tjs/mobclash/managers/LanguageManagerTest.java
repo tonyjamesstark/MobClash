@@ -6,6 +6,8 @@ import static org.mockito.Mockito.*;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.logging.Logger;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -78,7 +80,7 @@ class LanguageManagerTest {
   }
 
   @Test
-  void anUnversionedCopyLosesTheUsageTextThatMovedToPluginYml() throws IOException {
+  void anUnversionedCopyRunsEveryStep() throws IOException {
     File langFile = new File(tempDir.toFile(), "language.yml");
     try (FileWriter writer = new FileWriter(langFile)) {
       writer.write("no-permission: \"Locally edited\"\n");
@@ -87,21 +89,54 @@ class LanguageManagerTest {
       writer.write("help-killboard: \"old\"\n");
       writer.write("chest-missing: \"&cThe configured chest no longer exists!\"\n");
       writer.write("setchest-success: \"&aSpawn egg chest '{1}' set for group '{0}'!\"\n");
+      writer.write("must-look-chest: \"&cYou must be looking at a chest!\"\n");
     }
 
     languageManager.reload();
 
     YamlConfiguration saved = YamlConfiguration.loadConfiguration(langFile);
-    assertEquals(1, saved.getInt("format-version"));
+    assertEquals(2, saved.getInt("format-version"));
     assertEquals("Locally edited", saved.getString("no-permission"));
     assertFalse(saved.contains("killboard-usage"));
     assertFalse(saved.contains("help-header"));
     assertFalse(saved.contains("help-killboard"));
     assertFalse(saved.contains("chest-missing"));
     assertFalse(saved.contains("setchest-success"));
+    assertFalse(saved.contains("must-look-chest"));
     assertEquals(
         "§aChest 'gear1' set for group 'mash'!",
         languageManager.getMessage("setchest-success", "mash", "gear1"));
+  }
+
+  @Test
+  void aFormat1CopyLosesOnlyTheOldMustLookChestLine() throws IOException {
+    File langFile = new File(tempDir.toFile(), "language.yml");
+    try (FileWriter writer = new FileWriter(langFile)) {
+      writer.write("format-version: 1\n");
+      writer.write("no-permission: \"Locally edited\"\n");
+      writer.write("must-look-chest: \"&cYou must be looking at a chest!\"\n");
+      writer.write("killboard-usage: \"kept\"\n");
+    }
+
+    languageManager.reload();
+
+    YamlConfiguration saved = YamlConfiguration.loadConfiguration(langFile);
+    assertEquals(2, saved.getInt("format-version"));
+    assertFalse(saved.contains("must-look-chest"));
+    assertEquals("Locally edited", saved.getString("no-permission"));
+    assertEquals("kept", saved.getString("killboard-usage"));
+    assertEquals(
+        "§cLook at a chest, barrel or shulker box!", languageManager.getMessage("must-look-chest"));
+  }
+
+  @Test
+  void theBundledCopyIsAtTheCurrentFormat() {
+    // A fresh install writes the bundled copy, which must not run a step meant for an older one.
+    YamlConfiguration bundled =
+        YamlConfiguration.loadConfiguration(
+            new InputStreamReader(
+                getClass().getResourceAsStream("/language.yml"), StandardCharsets.UTF_8));
+    assertEquals(LanguageManager.FORMAT.size(), bundled.getInt("format-version"));
   }
 
   @Test

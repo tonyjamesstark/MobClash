@@ -1,7 +1,7 @@
 # MobClash Language Configuration
 
 # The layout version of this file. MobClash updates the file when a release changes it; do not edit.
-format-version: 1
+format-version: 2
 
 # Use {0}, {1}, etc. for placeholders
 # Use & for color codes (e.g., &a = green, &c = red, &e = yellow)
@@ -54,7 +54,7 @@ showspawns-success: "&aShowing {1} spawn point(s) for group '{0}'!"
 
 # Set Chest Command
 setchest-success: "&aChest '{1}' set for group '{0}'!"
-must-look-chest: "&cYou must be looking at a chest!"
+must-look-chest: "&cLook at a chest, barrel or shulker box!"
 
 # List Chests Command
 listchests-header: "&a=== Chests ({0} total) ==="

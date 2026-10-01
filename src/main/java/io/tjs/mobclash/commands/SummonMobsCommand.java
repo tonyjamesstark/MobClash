@@ -14,7 +14,6 @@ import java.util.regex.Pattern;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.block.Chest;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Entity;
@@ -118,13 +117,13 @@ public class SummonMobsCommand extends BaseCommand {
     }
 
     Block block = chestLocation.getBlock();
-    if (block.getType() != Material.CHEST) {
+    Inventory chest = chestInventory(block);
+    if (chest == null) {
       replyChestMissing(sender, groupName, waveName, chestLocation, block);
       return true;
     }
 
-    Chest chest = (Chest) block.getState();
-    List<PoolEntry> spawnEggs = getSpawnEggsFromChest(sender, chest.getInventory());
+    List<PoolEntry> spawnEggs = getSpawnEggsFromChest(sender, chest);
 
     if (spawnEggs.isEmpty()) {
       reply(sender, "no-spawn-eggs");
@@ -206,14 +205,12 @@ public class SummonMobsCommand extends BaseCommand {
       return null;
     }
     Block block = gearChest.getBlock();
-    if (block.getType() != Material.CHEST) {
+    Inventory gear = chestInventory(block);
+    if (gear == null) {
       replyChestMissing(sender, groupName, equipment, gearChest, block);
       return null;
     }
-    return new Options(
-        amount,
-        RandomEquipment.fromChest(((Chest) block.getState()).getInventory()),
-        "chest '" + equipment + "'");
+    return new Options(amount, RandomEquipment.fromChest(gear), "chest '" + equipment + "'");
   }
 
   /**

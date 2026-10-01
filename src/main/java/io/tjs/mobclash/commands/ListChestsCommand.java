@@ -10,9 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.block.Chest;
 import org.bukkit.command.CommandSender;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -88,8 +86,9 @@ public class ListChestsCommand extends BaseCommand {
       return;
     }
     Block block = loc.getBlock();
+    Inventory inventory = chestInventory(block);
 
-    if (block.getType() != Material.CHEST) {
+    if (inventory == null) {
       sender.sendMessage(
           langManager.getMessage(
               "listchests-missing",
@@ -103,7 +102,6 @@ public class ListChestsCommand extends BaseCommand {
       return;
     }
 
-    Inventory inventory = ((Chest) block.getState()).getInventory();
     int eggCount = 0;
     int itemCount = 0;
     for (ItemStack item : inventory.getContents()) {

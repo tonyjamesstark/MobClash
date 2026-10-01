@@ -1,5 +1,18 @@
 # Changelog
 
+## v2.2.1
+
+- A wave chest or gear chest can be a barrel or a shulker box of any colour, as well as a
+  chest. Before, `/setchest` accepted only a plain chest. Trapped chests, copper chests,
+  hoppers and other blocks are still refused, and a summon reports them as a missing chest.
+- `/setchest` on a block it does not accept replies "Look at a chest, barrel or shulker box!".
+  The first start on 2.2.1 removes the old `must-look-chest` line from `language.yml`, so the
+  new text applies. `language.yml` moves to format 2.
+- A wither MobClash summoned drops no nether star, however it dies and whether
+  `loot-to-inventory` is on or off. Before, the star dropped outside the wither's loot table, so a
+  `DeathLootTable` on the egg could not stop it, and `loot-to-inventory` put it in the killer's
+  inventory.
+
 ## v2.2.0
 
 - The kill board ranks the players in your world, including those with no kills yet, and shows

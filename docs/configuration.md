@@ -44,6 +44,10 @@ player has logged out or died by the time the mob dies, the drops stay on the gr
 kill still counts. A mob that dies without a player killing it drops its loot as usual. Only
 mobs MobClash summoned are affected.
 
+A wither MobClash summoned never drops its nether star, with `loot-to-inventory` on or off and
+whoever or whatever kills it. The game drops the star outside the wither's loot table, so a
+`DeathLootTable` on the egg cannot remove it. A wither summoned any other way keeps its star.
+
 `announce-kills` takes mob names as in `/summon`, with or without `minecraft:`. The message goes
 to every player in every world and to the console. It is `kill-announcement` in
 `language.yml`, where `{0}` is the killer and `{1}` the mob's name. A mob's death is
@@ -99,3 +103,4 @@ running MobClash knows, after a downgrade, is left as it is with a console warni
 | Format | Release | Change |
 |---|---|---|
 | 1 | 2.2.0 | `format-version` added. `language.yml` loses its `*-usage`, `help-*` and `help-header` lines, now in `plugin.yml`. It also loses its `chest-missing` line, so the new text that names the chest and its position applies, and its `setchest-success` line, which now says "Chest" rather than "Spawn egg chest". |
+| 2 | 2.2.1 | `language.yml` only. It loses its `must-look-chest` line, so the new text that names barrels and shulker boxes applies. `config.yml`, `spawns.yml` and `kills.yml` stay at format 1. |

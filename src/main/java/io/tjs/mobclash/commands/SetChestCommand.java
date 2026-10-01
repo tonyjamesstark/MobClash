@@ -3,7 +3,6 @@ package io.tjs.mobclash.commands;
 import io.tjs.mobclash.MobClashPlugin;
 import io.tjs.mobclash.managers.LanguageManager;
 import io.tjs.mobclash.managers.SpawnManager;
-import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -36,7 +35,7 @@ public class SetChestCommand extends BaseCommand {
     Player player = getPlayer(sender);
     Block targetBlock = player.getTargetBlock(null, 5);
 
-    if (targetBlock.getType() != Material.CHEST) {
+    if (chestInventory(targetBlock) == null) {
       sender.sendMessage(langManager.getMessage("must-look-chest"));
       return true;
     }
