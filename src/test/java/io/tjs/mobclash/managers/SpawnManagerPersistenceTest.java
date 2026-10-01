@@ -7,6 +7,7 @@ import io.tjs.mobclash.DataFile;
 import io.tjs.mobclash.MobClashPlugin;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -40,8 +41,9 @@ class SpawnManagerPersistenceTest {
   void setUp() {
     // Lenient: the name-validation test never reaches a file or a world.
     lenient().when(plugin.getDataFolder()).thenReturn(dataFolder.toFile());
+    lenient().when(plugin.getLogger()).thenReturn(Logger.getLogger("SpawnManagerPersistenceTest"));
     lenient().when(world.getName()).thenReturn("world");
-    storage = new DataFile(plugin, "spawns.yml");
+    storage = new DataFile(plugin, "spawns.yml", SpawnManager.FORMAT);
     bukkit = mockStatic(Bukkit.class);
     bukkit.when(() -> Bukkit.getWorld("world")).thenReturn(world);
     bukkit.when(() -> Bukkit.getWorld("deleted_world")).thenReturn(null);
@@ -54,7 +56,7 @@ class SpawnManagerPersistenceTest {
 
   /** Re-read spawns.yml from disk, so a round trip is the one the server would do on restart. */
   private DataFile reloadedFromDisk() {
-    return new DataFile(plugin, "spawns.yml");
+    return new DataFile(plugin, "spawns.yml", SpawnManager.FORMAT);
   }
 
   @Test

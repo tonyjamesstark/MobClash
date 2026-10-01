@@ -8,6 +8,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import io.tjs.mobclash.MobClashPlugin;
@@ -68,6 +69,7 @@ class MobDeathListenerTest {
     lenient().when(mobTracker.isMobClashMob(mob)).thenReturn(true);
     lenient().when(mob.getKiller()).thenReturn(killer);
     lenient().when(killer.getName()).thenReturn("Clasher");
+    lenient().when(killer.isOnline()).thenReturn(true);
     lenient().when(killer.getInventory()).thenReturn(inventory);
     lenient().when(plugin.getConfig()).thenReturn(config);
   }
@@ -107,6 +109,34 @@ class MobDeathListenerTest {
   }
 
   @Test
+  void aKillerWhoLoggedOutLeavesTheLootOnTheGroundButTheKillCounts() {
+    when(config.getBoolean("loot-to-inventory", false)).thenReturn(true);
+    when(killer.isOnline()).thenReturn(false);
+    ItemStack token = stackOf(1);
+    drops.add(token);
+
+    listener.onMobDeath(event);
+
+    assertEquals(List.of(token), drops);
+    verifyNoInteractions(inventory);
+    verify(mobTracker).recordKill(killer);
+  }
+
+  @Test
+  void aKillerWhoDiedLeavesTheLootOnTheGroundButTheKillCounts() {
+    when(config.getBoolean("loot-to-inventory", false)).thenReturn(true);
+    when(killer.isDead()).thenReturn(true);
+    ItemStack token = stackOf(1);
+    drops.add(token);
+
+    listener.onMobDeath(event);
+
+    assertEquals(List.of(token), drops);
+    verifyNoInteractions(inventory);
+    verify(mobTracker).recordKill(killer);
+  }
+
+  @Test
   void aMobNotSpawnedByMobClashIsIgnored() {
     when(mobTracker.isMobClashMob(mob)).thenReturn(false);
 
@@ -118,10 +148,16 @@ class MobDeathListenerTest {
 
   @Test
   void aDeathNotCausedByAPlayerIsNotCountedOrLooted() {
+    // Lenient because the correct handler returns before reading it. With the setting on, a
+    // handler that moved loot before checking for a player killer would fail this test.
+    lenient().when(config.getBoolean("loot-to-inventory", false)).thenReturn(true);
     when(mob.getKiller()).thenReturn(null);
+    ItemStack token = stackOf(1);
+    drops.add(token);
 
     listener.onMobDeath(event);
 
+    assertEquals(List.of(token), drops);
     verify(mobTracker, never()).recordKill(any());
     verify(plugin, never()).log(any(), anyString());
   }

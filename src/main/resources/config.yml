@@ -1,5 +1,8 @@
 # MobClash Plugin Configuration
 
+# The layout version of this file. MobClash updates the file when a release changes it; do not edit.
+format-version: 1
+
 # Logging level for plugin operations
 # Options: OFF, SEVERE, WARNING, INFO (default)
 # - INFO: Logs all operations (verbose, recommended for debugging)

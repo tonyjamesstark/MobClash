@@ -1,13 +1,34 @@
 package io.tjs.mobclash.managers;
 
+import io.tjs.mobclash.FileFormat;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.logging.Level;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class LanguageManager {
+
+  /**
+   * language.yml's migration steps, see {@link FileFormat#upgrade}. 0 to 1, in 2.2.0: usage and
+   * help text moved to plugin.yml, so the server's copy of the old lines is dead text; {@code
+   * chest-missing} gained the chest's name and place, which the old line has no placeholders for;
+   * and {@code setchest-success} says "Chest", since it also sets gear chests.
+   */
+  public static final List<Consumer<ConfigurationSection>> FORMAT =
+      List.of(
+          FileFormat.removeKeys(
+              key ->
+                  key.endsWith("-usage")
+                      || key.startsWith("help-")
+                      || key.equals("chest-missing")
+                      || key.equals("setchest-success")));
 
   private final JavaPlugin plugin;
   private FileConfiguration langConfig;
@@ -24,6 +45,13 @@ public class LanguageManager {
       plugin.saveResource("language.yml", false);
     }
     langConfig = YamlConfiguration.loadConfiguration(langFile);
+    if (FileFormat.upgrade(langConfig, "language.yml", FORMAT, plugin.getLogger())) {
+      try {
+        langConfig.save(langFile);
+      } catch (IOException e) {
+        plugin.getLogger().log(Level.WARNING, "Could not write the updated " + langFile, e);
+      }
+    }
     // The data-folder copy is written once, so every key a later release adds is missing from it
     // on an upgraded server. The bundled copy fills those gaps without overriding local edits.
     langConfig.setDefaults(

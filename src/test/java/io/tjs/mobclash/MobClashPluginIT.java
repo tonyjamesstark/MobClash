@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Logger;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -56,6 +57,7 @@ class MobClashPluginIT {
     // Setup plugin mock
     File dataFolder = tempDir.toFile();
     when(plugin.getDataFolder()).thenReturn(dataFolder);
+    lenient().when(plugin.getLogger()).thenReturn(Logger.getLogger("MobClashPluginIT"));
     when(plugin.getResource("language.yml"))
         .thenAnswer(invocation -> getClass().getResourceAsStream("/language.yml"));
 
@@ -66,9 +68,10 @@ class MobClashPluginIT {
     }
 
     // Create managers
-    spawnManager = new SpawnManager(plugin, new DataFile(plugin, "spawns.yml"));
+    spawnManager =
+        new SpawnManager(plugin, new DataFile(plugin, "spawns.yml", SpawnManager.FORMAT));
     languageManager = new LanguageManager(plugin);
-    mobTracker = new MobTracker(plugin, new DataFile(plugin, "kills.yml"));
+    mobTracker = new MobTracker(plugin, new DataFile(plugin, "kills.yml", MobTracker.FORMAT));
 
     // Lenient: only the summon workflows reach the tracker.
     lenient().when(plugin.getMobTracker()).thenReturn(mobTracker);

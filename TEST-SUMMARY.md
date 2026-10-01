@@ -2,8 +2,8 @@
 
 ## Test Coverage Overview
 
-**Total Test Files:** 17
-**Total Test Cases:** 144 (136 unit, run by `mvn test`; 8 integration, run only by `mvn verify`)
+**Total Test Files:** 24
+**Total Test Cases:** 227 (219 unit, run by `mvn test`; 8 integration, run only by `mvn verify`)
 **Package:** `io.tjs.mobclash`
 
 > Counts here are maintained by hand and have drifted before. Treat the surefire/failsafe output
@@ -13,7 +13,7 @@
 
 ## Unit Tests
 
-### 1. SpawnManagerTest.java (11 tests)
+### 1. SpawnManagerTest.java (20 tests)
 **Location:** `src/test/java/io/tjs/mobclash/managers/`
 
 ✅ `testAddSpawnPoint` - Verify spawn points are added correctly
@@ -27,12 +27,21 @@
 ✅ `testGetRandomSpawnPoint` - Random spawn point selection
 ✅ `testGetGroupWavesEmptyForNonExistentGroup` - Handle missing groups
 ✅ `testGetGroupChestReturnsNullForNonExistentWave` - Handle missing waves
+✅ `removeSpawnPointRemovesThePointAtThatIndexAndSavesTheRest` - `/removespawn <group> <number>`, checked in the saved `spawns.yml`
+✅ `removeSpawnPointOutOfRangeChangesNothing` - past the end, negative, unknown group
+✅ `removingTheLastPointByIndexRemovesTheGroup` - same empty-group cleanup as the nearest form
+✅ `removeGroupChestForgetsOnlyThatChest` - the other chest stays, on disk too
+✅ `removingTheLastChestDropsTheGroupFromTheChestGroups` - no empty chest group left behind
+✅ `removeGroupChestThatIsNotSetChangesNothing` - unknown chest or group
+✅ `removeGroupForgetsItsPointsAndChestsAndKeepsOtherGroups` - `/removegroup ... confirm`
+✅ `removeGroupRemovesAGroupThatHasOnlyChests` - a group made with `/setchest` alone
+✅ `removeGroupOfAnUnknownGroupReturnsFalse`
 ✅ Wave system integration
 
 **Key Features Tested:**
-- CRUD operations for spawn points
+- CRUD operations for spawn points, chests and whole groups
 - Wave system (multiple chests per group)
-- Config persistence
+- Config persistence, read back from the written `spawns.yml`
 - Nearest point calculation
 - Auto-cleanup
 
@@ -47,7 +56,7 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 
 ---
 
-### 3. LanguageManagerTest.java (8 tests)
+### 3. LanguageManagerTest.java (10 tests)
 **Location:** `src/test/java/io/tjs/mobclash/managers/`
 
 ✅ `testGetMessageSimple` - Basic message retrieval
@@ -55,6 +64,8 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 ✅ `testGetMessageWithMultiplePlaceholders` - Multiple placeholder replacement
 ✅ `testGetMessageMissingKey` - Missing translation handling
 ✅ `aKeyMissingFromAnOlderCopyFallsBackToTheBundledOne` - an upgraded server's old file still gets new keys
+✅ `anUnversionedCopyLosesTheUsageTextThatMovedToPluginYml` - the format 0 to 1 step, including the old `chest-missing` and `setchest-success` lines
+✅ `anUpgradedCopyNamesTheMissingChestWithTheBundledText` - the new `chest-missing` text and its placeholders
 ✅ `aLocallyEditedMessageWinsOverTheBundledOne` - the data-folder copy takes priority
 ✅ `reloadPicksUpAnEditMadeOnDisk` - `/mobclash reload` rereads the file
 ✅ `testColorCodeConversion` - & to § color code conversion
@@ -67,7 +78,7 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 
 ---
 
-### 4. MobTrackerTest.java (11 tests)
+### 4. MobTrackerTest.java (14 tests)
 **Location:** `src/test/java/io/tjs/mobclash/managers/`
 
 ✅ `testTagMob` - Tag mobs with NBT data
@@ -80,6 +91,9 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 ✅ `testGetTopKills` - Leaderboard sorting
 ✅ `testResetKills` - Reset individual player kills
 ✅ `testResetAllKills` - Reset all player kills
+✅ `removeMobsTakesOnlyTaggedMobsInEveryWorld` - `/killmobs`; untagged mobs and players stay
+✅ `removeMobsWithAGroupTakesOnlyThatGroupNotOneWhoseNameStartsTheSame` - group `a` leaves `ab:wave1`
+✅ `removeMobsWithAnUnknownGroupRemovesNothing`
 
 **Key Features Tested:**
 - NBT tagging system
@@ -87,6 +101,7 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 - Leaderboard functionality
 - Reset operations
 - Persistent data handling
+- `/killmobs` removal by tag and group
 
 ---
 
@@ -107,10 +122,11 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 
 ---
 
-### 6. ListSpawnsCommandTest.java (5 tests)
+### 6. ListSpawnsCommandTest.java (6 tests)
 **Location:** `src/test/java/io/tjs/mobclash/commands/`
 
 ✅ `eachSpawnPointIsListedInOrderWithRoundedCoordinates` - Ordering, world, rounding
+✅ `aPointWhoseWorldWasUnloadedIsListedAsSuch` - no throw when the world is gone
 ✅ `noArgumentsPrintsTheUsage` - Usage message validation
 ✅ `aMissingGroupIsReportedWithItsName` - Handle non-existent groups
 ✅ `anEmptyGroupIsReportedWithItsName` - Handle empty groups
@@ -122,7 +138,7 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 
 ---
 
-### 7. SummonMobsCommandTest.java (28 tests)
+### 7. SummonMobsCommandTest.java (29 tests)
 **Location:** `src/test/java/io/tjs/mobclash/commands/`
 
 ✅ `randomModeSpreadsTheRequestedCountOverThePoints` - Random spawn mode
@@ -140,9 +156,9 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 ✅ `aDataEggThatIsNotAMobIsSkippedWithAWarning` / `aDataEggWithRidersIsSkippedWithAWarning` / `aDataEggWithAFixedUuidIsSkippedWithAWarningToTheCommandBlock`
 ✅ `equipmentFalseLeavesVanillaGearAlone` - no equipment argument, no change to vanilla gear
 ✅ `equippingAPlainEggMobClearsVanillaGearAndNothingDrops` - via an empty gear chest
-✅ `aGearChestThatIsNoLongerThereIsReported`
+✅ `aGearChestThatIsNoLongerThereIsReported` - names the group, chest, block found, world and position
 ✅ `aSummonOverTheTotalCapIsRefused` - amount x points against max-mobs-per-summon
-✅ `aChestThatIsNoLongerThereIsReported` / `aChestWithNoSpawnEggsIsReported`
+✅ `aChestThatIsNoLongerThereIsReported` - the same detail for the wave chest / `aChestWithNoSpawnEggsIsReported`
 ✅ `aPlayerWithoutThePermissionIsRefused` - Permission denial
 
 **Key Features Tested:**
@@ -171,7 +187,7 @@ a dotted name, and the staged save that must not clear the tree before it can wr
 
 ---
 
-### 9. KillBoardTest.java (10 tests)
+### 9. KillBoardTest.java (20 tests)
 **Location:** `src/test/java/io/tjs/mobclash/managers/`
 
 Each fake scoreboard is backed by a map of its sidebar lines, so the tests assert on what a
@@ -190,7 +206,7 @@ player would read.
 
 ---
 
-### 10. KillBoardCommandTest.java (9 tests)
+### 10. KillBoardCommandTest.java (17 tests)
 **Location:** `src/test/java/io/tjs/mobclash/commands/`
 
 ✅ `aPlayerTogglesTheirOwn`
@@ -223,7 +239,7 @@ each with a fixed seed.
 
 ---
 
-### 12. MobClashCommandTest.java (5 tests)
+### 12. MobClashCommandTest.java (6 tests)
 **Location:** `src/test/java/io/tjs/mobclash/commands/`
 
 ✅ `helpListsOnlyTheCommandsTheSenderMayRun` - `/mobclash`, `/mobclash help`
@@ -250,11 +266,13 @@ each with a fixed seed.
 
 ---
 
-### 15. MobDeathListenerTest.java (8 tests)
+### 15. MobDeathListenerTest.java (10 tests)
 **Location:** `src/test/java/io/tjs/mobclash/listeners/`
 
 ✅ `lootGoesToTheKillerAndOnlyWhatDoesNotFitStaysOnTheGround`
 ✅ `withTheSettingOffTheDropsAreLeftAlone`
+✅ `aKillerWhoLoggedOutLeavesTheLootOnTheGroundButTheKillCounts`
+✅ `aKillerWhoDiedLeavesTheLootOnTheGroundButTheKillCounts`
 ✅ `aMobNotSpawnedByMobClashIsIgnored`
 ✅ `aDeathNotCausedByAPlayerIsNotCountedOrLooted`
 ✅ `aListedMobsDeathIsAnnouncedToTheWholeServer` - with or without `minecraft:`, any case
@@ -264,19 +282,73 @@ each with a fixed seed.
 
 ---
 
+### 15a. ListChestsCommandTest.java (9 tests)
+**Location:** `src/test/java/io/tjs/mobclash/commands/`
+
+✅ A present chest with its egg and item counts, a missing chest naming the block found, a chest whose world was unloaded, the group
+filter, an unknown group, no chests at all, sort order, extra arguments, permission refusal
+
+### 15b. VersionCommandTest.java (2 tests)
+**Location:** `src/test/java/io/tjs/mobclash/commands/`
+
+✅ Replies with the plugin name, version and server version; permission refusal
+
+### 15c. RemoveSpawnCommandTest.java (10 tests)
+**Location:** `src/test/java/io/tjs/mobclash/commands/`
+
+✅ Without a number, the point nearest the player; the console has no position for that form.
+A number removes that point from the console, and from a command block with the reply logged.
+A point whose world was unloaded is still removed and the reply says so. A number past the end,
+zero or a word changes nothing and names the range. Unknown group, too many arguments.
+
+### 15d. RemoveChestCommandTest.java (5 tests)
+**Location:** `src/test/java/io/tjs/mobclash/commands/`
+
+✅ A set chest is forgotten; a chest that is not set is reported; a command block runs it and its
+reply reaches the console; wrong argument count prints the usage; permission refusal
+
+### 15e. RemoveGroupCommandTest.java (7 tests)
+**Location:** `src/test/java/io/tjs/mobclash/commands/`
+
+✅ Without `confirm`, the counts it would remove and nothing removed. With `confirm`, the group
+removed and the counts reported, case-insensitive. A chest-only group counts as existing. An
+unknown group, a second argument other than `confirm`, permission refusal.
+
+### 15f. KillMobsCommandTest.java (4 tests)
+**Location:** `src/test/java/io/tjs/mobclash/commands/`
+
+✅ Without a group, the count removed is reported; with one, the group and its count; an extra
+argument prints the usage and removes nothing; permission refusal. Which mobs go is covered in
+MobTrackerTest.
+
 ## Integration Tests
 
-### 16. DataFileTest.java (5 tests)
+### 16. DataFileTest.java (7 tests)
 **Location:** `src/test/java/io/tjs/mobclash/`
 
 ✅ `adoptMovesTheWholeTreeAndLeavesNothingBehind` - the one-time config.yml migration
 ✅ `adoptLeavesOperatorSettingsAlone` - settings do not follow the data across
 ✅ `adoptReportsThatAFreshInstallHasNothingToMove` - no migration on a new server
 ✅ `adoptedDataSurvivesTheWriteToDisk` - migrated data round-trips through YAML
-✅ `aFileThatDoesNotExistYetOpensEmptyRatherThanFailing` - first-run behaviour
+✅ `aFileThatDoesNotExistYetOpensWithOnlyItsFormatRatherThanFailing` - first-run behaviour
+✅ `anUnversionedFileIsStampedOnTheNextSave` - a pre-2.2.0 file gets `format-version`
+✅ `aNewFileStartsAtTheCurrentFormat` - a new file is written already stamped
 
 **Key Features Tested:**
 - The upgrade path, which runs once and has no second chance to be right
+
+---
+
+### 16a. FileFormatTest.java (7 tests)
+**Location:** `src/test/java/io/tjs/mobclash/`
+
+✅ `anUnversionedFileRunsEveryStepAndIsStamped` - a missing `format-version` counts as 0
+✅ `onlyTheStepsAfterTheFilesVersionRun` - steps already applied are skipped
+✅ `aCurrentFileIsLeftAlone` - no change, no save, no log line
+✅ `aFileFromANewerReleaseIsLeftAloneWithAWarning` - a downgrade does not touch the file
+✅ `theBundledDefaultsDoNotCountAsTheFilesVersion` - the jar's copy cannot stand in for the file's
+✅ `aRemovedKeysCommentsMoveToTheNextKey` - a section heading survives its first key's removal
+✅ `theStampExplainsItselfInTheFile` - the new `format-version` line carries its comment
 
 ---
 
@@ -331,13 +403,13 @@ mvn clean test jacoco:report
 
 | Component | Tests | Coverage |
 |-----------|-------|----------|
-| SpawnManager (behaviour) | 11 | ✅ High |
+| SpawnManager (behaviour) | 20 | ✅ High |
 | SpawnManager (persistence round trip) | 6 | ✅ High |
-| LanguageManager | 8 | ✅ High |
-| MobTracker | 11 | ✅ High |
+| LanguageManager | 10 | ✅ High |
+| MobTracker | 14 | ✅ High |
 | RandomEquipment (draw and config) | 11 | ✅ High; the equip step was tested live |
-| Commands | 51 | ⚠️ Partial — `KillsCommand` has no tests |
-| Listeners | 5 | ✅ `MobDeathListener` |
+| Commands | 104 | ⚠️ Partial — `KillsCommand` has no tests |
+| Listeners | 10 | ✅ `MobDeathListener` |
 | Integration | 8 | ⚠️ Manager-level only; no command, listener or lifecycle coverage |
 
 ---
@@ -407,7 +479,9 @@ void testFeatureName() {
 
 ### Loot to Inventory ✅
 - `MobDeathListenerTest`: drops move to the killer and only what does not fit stays on the
-  ground; the setting off leaves drops alone; non-MobClash mobs and non-player kills are skipped;
+  ground; a killer who has logged out or died gets nothing and the drops stay, but the kill
+  counts; the setting off leaves drops alone; non-MobClash mobs and non-player kills are skipped
+  with their drops untouched;
   the handler is registered to skip cancelled deaths (Bukkit enforces that, so only the flags are
   pinned). The loot table itself runs in the server, not here; smoke-tested live instead.
 
@@ -426,12 +500,19 @@ void testFeatureName() {
 - [x] KillBoardTest.java
 - [x] KillBoardCommandTest.java
 - [x] DataFileTest.java
+- [x] FileFormatTest.java
 - [x] MobClashPluginIT.java
 - [x] RandomEquipmentTest.java
 - [x] MobClashCommandTest.java
 - [x] ReloadCommandTest.java
 - [x] RequireParsesTest.java
 - [x] MobDeathListenerTest.java
+- [x] ListChestsCommandTest.java
+- [x] VersionCommandTest.java
+- [x] RemoveSpawnCommandTest.java
+- [x] RemoveChestCommandTest.java
+- [x] RemoveGroupCommandTest.java
+- [x] KillMobsCommandTest.java
 - [ ] KillsCommandTest.java (can be added)
 
 ---

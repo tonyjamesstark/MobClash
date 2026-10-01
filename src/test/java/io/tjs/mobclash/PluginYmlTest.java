@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -128,18 +129,26 @@ class PluginYmlTest {
   }
 
   @Test
-  void everyCommandHasALineInMobclashHelp() throws IOException {
-    // /mobclash help looks up help-<name> for each subcommand; a missing key prints "Missing
-    // translation" to every player.
-    Map<String, Object> language;
-    try (InputStream in = getClass().getResourceAsStream("/language.yml")) {
-      language = new Yaml().load(in);
-    }
-    Set<String> subcommands = new TreeSet<>(section("commands").keySet());
-    subcommands.remove("mobclash");
-    subcommands.add("reload");
-    List<String> missing =
-        subcommands.stream().filter(name -> !language.containsKey("help-" + name)).toList();
-    assertTrue(missing.isEmpty(), "no help line in language.yml for: " + missing);
+  @SuppressWarnings("unchecked")
+  void everyCommandHasADescribedLineInMobclashHelp() throws IOException {
+    // /mobclash help shows each usage line that starts with /<command>, and a usage error shows
+    // them all. A line without " - what it does" would list a form with no explanation. reload
+    // and version are not standalone, so their lines live in /mobclash's own usage.
+    Map<String, Object> commands = section("commands");
+    String rootUsage = ((Map<String, Object>) commands.get("mobclash")).get("usage").toString();
+    Map<String, String> usages = new TreeMap<>();
+    commands.forEach(
+        (name, declared) -> usages.put(name, ((Map<String, Object>) declared).get("usage") + ""));
+    usages.remove("mobclash");
+    usages.put("reload", MobClashPlugin.subcommandUsage(rootUsage, "reload"));
+    usages.put("version", MobClashPlugin.subcommandUsage(rootUsage, "version"));
+
+    usages.forEach(
+        (name, usage) -> {
+          List<String> forms = usage.lines().filter(line -> line.startsWith("/<command>")).toList();
+          assertFalse(forms.isEmpty(), name + " has no /<command> line for /mobclash help");
+          forms.forEach(
+              form -> assertTrue(form.contains(" - "), name + " line has no description: " + form));
+        });
   }
 }

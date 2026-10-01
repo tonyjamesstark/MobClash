@@ -39,6 +39,11 @@ random-equipment:
   max-sharpness: 5
 ```
 
+`loot-to-inventory` moves a mob's drops into the inventory of the player who killed it. If that
+player has logged out or died by the time the mob dies, the drops stay on the ground and the
+kill still counts. A mob that dies without a player killing it drops its loot as usual. Only
+mobs MobClash summoned are affected.
+
 `announce-kills` takes mob names as in `/summon`, with or without `minecraft:`. The message goes
 to every player in every world and to the console. It is `kill-announcement` in
 `language.yml`, where `{0}` is the killer and `{1}` the mob's name. A mob's death is
@@ -54,13 +59,14 @@ A `config.yml` from an older version has no `random-equipment` section and uses 
 above; so does any key left out of it. An unknown armor material or weapon is skipped with a
 console warning at each summon.
 
-`config.yml` is yours. The plugin never writes to it, so edits on a running server are kept.
+`config.yml` is yours. The plugin writes to it only when a release changes its layout (see
+Format version below), so edits on a running server are kept.
 Run `/mobclash reload` to apply them. If either `config.yml` or `language.yml` has a syntax
 error, nothing is reloaded and the console shows where.
 
 ## spawns.yml and kills.yml
 
-The plugin writes spawn groups and wave chests to `spawns.yml`, and kill counts to `kills.yml`.
+The plugin writes spawn groups and chests to `spawns.yml`, and kill counts to `kills.yml`.
 It rewrites them from memory on every save, so edit them only with the server stopped.
 
 ## language.yml
@@ -75,6 +81,21 @@ addspawn-success: "&aAdded spawn point to group '{0}'! Total points: {1}"
 
 The file is written once and never overwritten. Any message it lacks, such as one added by a
 later release, comes from the plugin's built-in copy. A message a later release changed keeps
-its old text until you delete that line, for example `summonmobs-usage`, which gained the
-equipment argument.
+its old text until you delete that line.
 `/mobclash reload` applies edits without a restart.
+
+Command usage and help text are not in this file. They come from the plugin's `plugin.yml`,
+so `/mobclash help` and the usage shown after a wrong command always match the release.
+
+## Format version
+
+`config.yml`, `language.yml`, `spawns.yml` and `kills.yml` each carry a `format-version` line.
+When a release changes a file's layout, MobClash updates the server's copy at startup (and on
+`/mobclash reload` for `config.yml` and `language.yml`), keeping your values, and logs
+`Updated <file> from format N to M`. Do not edit the number. A file without it counts as
+format 0, which is every file written before 2.2.0. A file with a higher number than the
+running MobClash knows, after a downgrade, is left as it is with a console warning.
+
+| Format | Release | Change |
+|---|---|---|
+| 1 | 2.2.0 | `format-version` added. `language.yml` loses its `*-usage`, `help-*` and `help-header` lines, now in `plugin.yml`. It also loses its `chest-missing` line, so the new text that names the chest and its position applies, and its `setchest-success` line, which now says "Chest" rather than "Spawn egg chest". |

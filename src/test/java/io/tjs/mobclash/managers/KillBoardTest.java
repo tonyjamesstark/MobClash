@@ -21,9 +21,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
-import org.bukkit.OfflinePlayer;
-import org.bukkit.Server;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
@@ -38,26 +39,25 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
  * Each scoreboard the manager hands out is backed by a plain map of its sidebar lines, so the tests
- * assert on what a player would read rather than on which calls produced it.
+ * assert on what a player would read rather than on which calls produced it. Kill counts come from
+ * stubbing {@code MobTracker.getKills(Player)} directly rather than {@code getTopKills}, since
+ * ranking is now computed per world from whoever is currently in it.
  */
 @ExtendWith(MockitoExtension.class)
 class KillBoardTest {
 
   @Mock private MobClashPlugin plugin;
-  @Mock private Server server;
   @Mock private MobTracker mobTracker;
   @Mock private LanguageManager langManager;
   @Mock private ScoreboardManager scoreboards;
   @Mock private Scoreboard mainBoard;
 
   private final Map<Scoreboard, Map<String, Integer>> sidebars = new HashMap<>();
-  private final Map<String, UUID> ids = new HashMap<>();
   private KillBoard killBoard;
 
   @BeforeEach
   void setUp() {
     killBoard = new KillBoard(plugin, mobTracker, langManager, scoreboards);
-    lenient().when(plugin.getServer()).thenReturn(server);
     lenient().when(langManager.getMessage("killboard-title")).thenReturn("Kills");
     lenient().when(scoreboards.getNewScoreboard()).thenAnswer(invocation -> newBoard());
   }
@@ -88,12 +88,26 @@ class KillBoardTest {
     return board;
   }
 
+  private World world() {
+    World world = mock(World.class);
+    lenient().when(world.getUID()).thenReturn(UUID.randomUUID());
+    lenient().when(world.getPlayers()).thenReturn(List.of());
+    return world;
+  }
+
+  /** Sets who World#getPlayers() reports for this world, and points each one back at it. */
+  private void inWorld(World world, Player... players) {
+    lenient().when(world.getPlayers()).thenReturn(List.of(players));
+    for (Player player : players) {
+      lenient().when(player.getWorld()).thenReturn(world);
+    }
+  }
+
   /** A player whose scoreboard behaves like the real one: set replaces what get returns. */
   private Player player(String name) {
     Player player = mock(Player.class);
-    UUID id = ids.computeIfAbsent(name, n -> UUID.randomUUID());
     AtomicReference<Scoreboard> current = new AtomicReference<>(mainBoard);
-    lenient().when(player.getUniqueId()).thenReturn(id);
+    lenient().when(player.getUniqueId()).thenReturn(UUID.randomUUID());
     lenient().when(player.getName()).thenReturn(name);
     lenient().when(player.getScoreboard()).thenAnswer(invocation -> current.get());
     lenient()
@@ -103,28 +117,8 @@ class KillBoardTest {
     return player;
   }
 
-  /** The kill totals, top first, as MobTracker reports them, plus each player's own count. */
-  private void givenKills(Map<String, Integer> kills) {
-    List<Map.Entry<UUID, Integer>> top =
-        kills.entrySet().stream()
-            .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
-            .limit(KillBoard.TOP)
-            .map(
-                e ->
-                    Map.entry(
-                        ids.computeIfAbsent(e.getKey(), n -> UUID.randomUUID()), e.getValue()))
-            .toList();
-    lenient().when(mobTracker.getTopKills(KillBoard.TOP)).thenReturn(top);
-    kills.forEach(
-        (name, count) -> {
-          OfflinePlayer offline = mock(OfflinePlayer.class);
-          lenient().when(offline.getName()).thenReturn(name);
-          lenient().when(server.getOfflinePlayer(ids.get(name))).thenReturn(offline);
-        });
-    lenient()
-        .when(mobTracker.getKills(any(Player.class)))
-        .thenAnswer(
-            invocation -> kills.getOrDefault(invocation.<Player>getArgument(0).getName(), 0));
+  private void kills(Player player, int count) {
+    lenient().when(mobTracker.getKills(player)).thenReturn(count);
   }
 
   private Map<String, Integer> sidebarOf(Player player) {
@@ -133,8 +127,12 @@ class KillBoardTest {
 
   @Test
   void showingPutsTheLeaderboardInTheSidebar() {
-    givenKills(Map.of("Alice", 7, "Bob", 3));
+    World world = world();
     Player alice = player("Alice");
+    Player bob = player("Bob");
+    inWorld(world, alice, bob);
+    kills(alice, 7);
+    kills(bob, 3);
 
     assertTrue(killBoard.show(alice));
 
@@ -145,29 +143,12 @@ class KillBoardTest {
   }
 
   @Test
-  void aViewerOutsideTheTopTenStillSeesTheirOwnLine() {
-    Map<String, Integer> kills = new HashMap<>();
-    for (int i = 1; i <= KillBoard.TOP; i++) {
-      kills.put("Top" + i, 100 + i);
-    }
-    kills.put("Carol", 2);
-    givenKills(kills);
-    Player carol = player("Carol");
-    Player top1 = player("Top1");
-
-    killBoard.show(carol);
-    killBoard.show(top1);
-
-    assertEquals(KillBoard.TOP + 1, sidebarOf(carol).size());
-    assertEquals(2, sidebarOf(carol).get("Carol"));
-    assertEquals(KillBoard.TOP, sidebarOf(top1).size());
-    assertFalse(sidebarOf(top1).containsKey("Carol"));
-  }
-
-  @Test
-  void aNewViewerWithNoKillsSeesAZero() {
-    givenKills(Map.of("Alice", 7));
+  void playersWithNoKillsStillAppearOnTheBoard() {
+    World world = world();
+    Player alice = player("Alice");
     Player dave = player("Dave");
+    inWorld(world, alice, dave);
+    kills(alice, 7);
 
     killBoard.show(dave);
 
@@ -175,12 +156,56 @@ class KillBoardTest {
   }
 
   @Test
+  void playersInAnotherWorldDoNotAppear() {
+    World arena = world();
+    World nether = world();
+    Player alice = player("Alice");
+    Player eve = player("Eve");
+    inWorld(arena, alice);
+    inWorld(nether, eve);
+    kills(eve, 50);
+
+    killBoard.show(alice);
+
+    assertEquals(Map.of("Alice", 0), sidebarOf(alice));
+  }
+
+  @Test
+  void aViewerOutsideTheTopTenStillSeesTheirOwnLine() {
+    World world = world();
+    Player[] tops = new Player[KillBoard.TOP];
+    for (int i = 0; i < KillBoard.TOP; i++) {
+      tops[i] = player("Top" + (i + 1));
+      kills(tops[i], 100 + i);
+    }
+    Player carol = player("Carol");
+    kills(carol, 2);
+    Player[] everyone = new Player[KillBoard.TOP + 1];
+    System.arraycopy(tops, 0, everyone, 0, KillBoard.TOP);
+    everyone[KillBoard.TOP] = carol;
+    inWorld(world, everyone);
+
+    killBoard.show(carol);
+    killBoard.show(tops[0]);
+
+    assertEquals(KillBoard.TOP + 1, sidebarOf(carol).size());
+    assertEquals(2, sidebarOf(carol).get("Carol"));
+    assertEquals(KillBoard.TOP, sidebarOf(tops[0]).size());
+    assertFalse(sidebarOf(tops[0]).containsKey("Carol"));
+  }
+
+  @Test
   void refreshUpdatesCountsAndDropsLinesThatLeft() {
-    givenKills(Map.of("Alice", 7, "Bob", 3));
+    World world = world();
+    Player alice = player("Alice");
     Player bob = player("Bob");
+    inWorld(world, alice, bob);
+    kills(alice, 7);
+    kills(bob, 3);
     killBoard.show(bob);
 
-    givenKills(Map.of("Bob", 4));
+    inWorld(world, bob);
+    kills(bob, 4);
     killBoard.refresh();
 
     assertEquals(Map.of("Bob", 4), sidebarOf(bob));
@@ -188,8 +213,9 @@ class KillBoardTest {
 
   @Test
   void hidingPutsBackTheScoreboardThePlayerHadBefore() {
-    givenKills(Map.of());
+    World world = world();
     Player alice = player("Alice");
+    inWorld(world, alice);
     killBoard.show(alice);
 
     assertTrue(killBoard.hide(alice));
@@ -200,8 +226,9 @@ class KillBoardTest {
 
   @Test
   void hidingLeavesAScoreboardAnotherPluginSwappedIn() {
-    givenKills(Map.of());
+    World world = world();
     Player alice = player("Alice");
+    inWorld(world, alice);
     Scoreboard theirs = mock(Scoreboard.class);
     killBoard.show(alice);
     alice.setScoreboard(theirs);
@@ -213,8 +240,9 @@ class KillBoardTest {
 
   @Test
   void toggleFlipsAndReportsTheNewState() {
-    givenKills(Map.of());
+    World world = world();
     Player alice = player("Alice");
+    inWorld(world, alice);
 
     assertTrue(killBoard.toggle(alice));
     assertTrue(killBoard.isShowing(alice));
@@ -225,8 +253,9 @@ class KillBoardTest {
 
   @Test
   void showingTwiceKeepsOneBoard() {
-    givenKills(Map.of());
+    World world = world();
     Player alice = player("Alice");
+    inWorld(world, alice);
     killBoard.show(alice);
     Scoreboard first = alice.getScoreboard();
 
@@ -236,9 +265,10 @@ class KillBoardTest {
 
   @Test
   void hideAllRestoresEveryViewerAndCountsThem() {
-    givenKills(Map.of());
+    World world = world();
     Player alice = player("Alice");
     Player bob = player("Bob");
+    inWorld(world, alice, bob);
     killBoard.show(alice);
     killBoard.show(bob);
 
@@ -251,8 +281,9 @@ class KillBoardTest {
 
   @Test
   void aPlayerWhoQuitsComesBackWithItOff() {
-    givenKills(Map.of());
+    World world = world();
     Player alice = player("Alice");
+    inWorld(world, alice);
     killBoard.show(alice);
 
     PlayerQuitEvent quit = mock(PlayerQuitEvent.class);
@@ -261,5 +292,150 @@ class KillBoardTest {
 
     assertFalse(killBoard.isShowing(alice));
     assertEquals(0, killBoard.hideAll());
+  }
+
+  @Test
+  void aQuittingPlayerDropsOffOthersBoards() {
+    World world = world();
+    Player alice = player("Alice");
+    Player bob = player("Bob");
+    inWorld(world, alice, bob);
+    kills(alice, 7);
+    killBoard.show(bob);
+
+    PlayerQuitEvent quit = mock(PlayerQuitEvent.class);
+    when(quit.getPlayer()).thenReturn(alice);
+    killBoard.onQuit(quit);
+
+    assertEquals(Map.of("Bob", 0), sidebarOf(bob));
+  }
+
+  @Test
+  void enableWorldShowsItToEveryoneThereNow() {
+    World world = world();
+    Player alice = player("Alice");
+    Player bob = player("Bob");
+    inWorld(world, alice, bob);
+
+    assertEquals(2, killBoard.enableWorld(world));
+
+    assertTrue(killBoard.isShowing(alice));
+    assertTrue(killBoard.isShowing(bob));
+  }
+
+  @Test
+  void aPlayerJoiningASwitchedOnWorldGetsTheBoard() {
+    World world = world();
+    killBoard.enableWorld(world);
+    Player alice = player("Alice");
+    inWorld(world, alice);
+
+    PlayerJoinEvent join = mock(PlayerJoinEvent.class);
+    when(join.getPlayer()).thenReturn(alice);
+    killBoard.onJoin(join);
+
+    assertTrue(killBoard.isShowing(alice));
+  }
+
+  @Test
+  void aPlayerChangingIntoASwitchedOnWorldGetsTheBoard() {
+    World arena = world();
+    World nether = world();
+    killBoard.enableWorld(arena);
+    Player alice = player("Alice");
+    inWorld(nether, alice);
+
+    inWorld(arena, alice);
+    PlayerChangedWorldEvent change = mock(PlayerChangedWorldEvent.class);
+    when(change.getPlayer()).thenReturn(alice);
+    killBoard.onWorldChange(change);
+
+    assertTrue(killBoard.isShowing(alice));
+  }
+
+  @Test
+  void aPlayerArrivingShowsUpOnTheBoardsAlreadyInThatWorld() {
+    World arena = world();
+    World nether = world();
+    Player alice = player("Alice");
+    Player bob = player("Bob");
+    inWorld(arena, alice);
+    inWorld(nether, bob);
+    killBoard.show(alice);
+    assertEquals(Map.of("Alice", 0), sidebarOf(alice));
+
+    inWorld(arena, alice, bob);
+    PlayerChangedWorldEvent change = mock(PlayerChangedWorldEvent.class);
+    when(change.getPlayer()).thenReturn(bob);
+    killBoard.onWorldChange(change);
+
+    assertEquals(Map.of("Alice", 0, "Bob", 0), sidebarOf(alice));
+  }
+
+  @Test
+  void aPlayerLeavingASwitchedOnWorldLosesTheBoard() {
+    World arena = world();
+    World nether = world();
+    Player alice = player("Alice");
+    inWorld(arena, alice);
+    killBoard.enableWorld(arena);
+    assertTrue(killBoard.isShowing(alice));
+
+    inWorld(nether, alice);
+    PlayerChangedWorldEvent change = mock(PlayerChangedWorldEvent.class);
+    when(change.getPlayer()).thenReturn(alice);
+    killBoard.onWorldChange(change);
+
+    assertFalse(killBoard.isShowing(alice));
+  }
+
+  @Test
+  void aPlayerWhoSwitchedItOnThemselvesKeepsItLeavingASwitchedOnWorld() {
+    World arena = world();
+    World nether = world();
+    Player alice = player("Alice");
+    inWorld(arena, alice);
+    killBoard.show(alice);
+    killBoard.enableWorld(arena);
+    assertTrue(killBoard.isShowing(alice));
+
+    inWorld(nether, alice);
+    PlayerChangedWorldEvent change = mock(PlayerChangedWorldEvent.class);
+    when(change.getPlayer()).thenReturn(alice);
+    killBoard.onWorldChange(change);
+
+    assertTrue(killBoard.isShowing(alice));
+  }
+
+  @Test
+  void disableWorldHidesEveryoneThereIncludingSelfEnabled() {
+    World world = world();
+    Player alice = player("Alice");
+    Player bob = player("Bob");
+    inWorld(world, alice, bob);
+    killBoard.show(alice);
+    killBoard.enableWorld(world);
+    assertTrue(killBoard.isShowing(bob));
+
+    assertEquals(2, killBoard.disableWorld(world));
+
+    assertFalse(killBoard.isShowing(alice));
+    assertFalse(killBoard.isShowing(bob));
+  }
+
+  @Test
+  void allOffClearsWorldSwitchesToo() {
+    World world = world();
+    killBoard.enableWorld(world);
+
+    killBoard.hideAll();
+
+    Player bob = player("Bob");
+    inWorld(world, bob);
+    PlayerJoinEvent join = mock(PlayerJoinEvent.class);
+    when(join.getPlayer()).thenReturn(bob);
+    killBoard.onJoin(join);
+
+    assertFalse(killBoard.isShowing(bob));
   }
 }

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -20,6 +21,7 @@ import io.tjs.mobclash.managers.SpawnManager;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.logging.Level;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -41,6 +43,7 @@ import org.bukkit.inventory.meta.SpawnEggMeta;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -67,6 +70,7 @@ class SummonMobsCommandTest {
   @Mock private Block block;
   @Mock private Chest chest;
   @Mock private Inventory inventory;
+  @Mock private Block commandBlockBlock;
 
   private SummonMobsCommand summonMobsCommand;
   private Location spawnLoc;
@@ -86,6 +90,11 @@ class SummonMobsCommandTest {
     lenient()
         .when(langManager.getMessage(anyString(), any(Object[].class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
+    // reply() logs a command block's own location, which a production operator needs to find
+    // which block refused. Only tests that run the command block to a reply() path use this.
+    lenient().when(world.getName()).thenReturn("test-world");
+    lenient().when(commandBlock.getBlock()).thenReturn(commandBlockBlock);
+    lenient().when(commandBlockBlock.getLocation()).thenReturn(new Location(world, 10, 5, 20));
   }
 
   private boolean run(Object sender, String... args) {
@@ -334,8 +343,11 @@ class SummonMobsCommandTest {
 
   @Test
   void tooFewArgumentsPrintsTheUsage() {
+    summonMobsCommand.setUsage("/<command> <group> <wave> all - summon\nan explanation");
     assertTrue(run(player, "test-group"));
-    verify(player).sendMessage("summonmobs-usage");
+    InOrder order = inOrder(player);
+    order.verify(player).sendMessage("§e/summonmobs <group> <wave> all §7- summon");
+    order.verify(player).sendMessage("§7an explanation");
   }
 
   @Test
@@ -392,9 +404,10 @@ class SummonMobsCommandTest {
 
   @Test
   void anExtraArgumentPrintsTheUsage() {
-    givenGroup("test-group", "wave1", List.of(spawnLoc));
+    summonMobsCommand.setUsage("/<command> <group> - summon");
     assertTrue(run(player, "test-group", "wave1", "random", "1", "false", "more"));
-    verify(player).sendMessage("summonmobs-usage");
+    assertTrue(run(player, "test-group", "wave1", "random", "false", "more"));
+    verify(player, times(2)).sendMessage("§e/summonmobs <group> §7- summon");
   }
 
   @Test
@@ -435,6 +448,9 @@ class SummonMobsCommandTest {
 
     assertTrue(run(player, "test-group", "wave1", "random", "gear"));
 
+    verify(langManager)
+        .getMessage(
+            "chest-missing", "test-group", "gear", Material.STONE, "test-world", 60, 64, 60);
     verify(player).sendMessage("chest-missing");
     verify(world, never()).spawnEntity(any(Location.class), any(EntityType.class));
   }
@@ -501,7 +517,11 @@ class SummonMobsCommandTest {
 
     assertTrue(run(player, "test-group", "wave1", "random"));
 
+    verify(langManager)
+        .getMessage(
+            "chest-missing", "test-group", "wave1", Material.STONE, "test-world", 50, 64, 50);
     verify(player).sendMessage("chest-missing");
+    verify(world, never()).spawnEntity(any(Location.class), any(EntityType.class));
   }
 
   @Test
@@ -513,6 +533,19 @@ class SummonMobsCommandTest {
     assertTrue(run(player, "test-group", "wave1", "random"));
 
     verify(player).sendMessage("no-spawn-eggs");
+  }
+
+  @Test
+  void aCommandBlockRefusalIsAlsoLoggedWithItsLocation() {
+    // Production's command block refusal never reached the console: LastOutput on a command
+    // block is as invisible as vanilla's DEBUG-only exception log. reply() must name the block's
+    // world and position so the operator can find it from the server log alone.
+    when(spawnManager.hasGroup("nonexistent")).thenReturn(false);
+
+    assertTrue(run(commandBlock, "nonexistent", "wave1", "random"));
+
+    verify(commandBlock).sendMessage("group-not-exist");
+    verify(plugin).log(Level.INFO, "Command block at test-world 10 5 20: group-not-exist");
   }
 
   @Test

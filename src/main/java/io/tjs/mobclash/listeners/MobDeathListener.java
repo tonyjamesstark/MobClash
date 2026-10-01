@@ -68,8 +68,11 @@ public class MobDeathListener implements Listener {
     killBoard.refresh();
     announceIfListed(killer, event);
 
-    // Handle loot directly to inventory if configured
-    if (plugin.getConfig().getBoolean("loot-to-inventory", false)) {
+    // The killer is whoever hit the mob last, who may have logged out or died before it fell.
+    // Their inventory is then no place for the loot, so it stays on the ground.
+    if (plugin.getConfig().getBoolean("loot-to-inventory", false)
+        && killer.isOnline()
+        && !killer.isDead()) {
       handleLootToInventory(killer, event);
     }
   }

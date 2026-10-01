@@ -2,7 +2,9 @@ package io.tjs.mobclash;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -22,12 +24,23 @@ public class DataFile {
   private final File file;
   private final FileConfiguration config;
 
-  public DataFile(MobClashPlugin plugin, String name) {
+  /**
+   * Load the file and bring it to the current format, in memory: the next save writes the result,
+   * and a crash before then leaves the old file to be updated again at the next start.
+   *
+   * @param format the file's migration steps, see {@link FileFormat#upgrade}
+   */
+  public DataFile(MobClashPlugin plugin, String name, List<Consumer<ConfigurationSection>> format) {
     this.plugin = plugin;
     this.file = new File(plugin.getDataFolder(), name);
     // Returns an empty configuration for a file that does not exist yet, which is what a first
     // run looks like.
     this.config = YamlConfiguration.loadConfiguration(file);
+    if (file.exists()) {
+      FileFormat.upgrade(config, name, format, plugin.getLogger());
+    } else {
+      FileFormat.stamp(config, format.size());
+    }
   }
 
   public FileConfiguration config() {

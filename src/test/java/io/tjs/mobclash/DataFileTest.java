@@ -4,9 +4,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
+import io.tjs.mobclash.managers.MobTracker;
+import io.tjs.mobclash.managers.SpawnManager;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Set;
+import java.util.logging.Logger;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +40,8 @@ class DataFileTest {
   @BeforeEach
   void setUp() {
     when(plugin.getDataFolder()).thenReturn(dataFolder.toFile());
-    spawns = new DataFile(plugin, "spawns.yml");
+    lenient().when(plugin.getLogger()).thenReturn(Logger.getLogger("DataFileTest"));
+    spawns = new DataFile(plugin, "spawns.yml", SpawnManager.FORMAT);
     legacyConfig = new YamlConfiguration();
   }
 
@@ -83,15 +92,37 @@ class DataFileTest {
 
     spawns.save();
 
-    DataFile reopened = new DataFile(plugin, "spawns.yml");
+    DataFile reopened = new DataFile(plugin, "spawns.yml", SpawnManager.FORMAT);
     assertEquals(12.25, reopened.config().getDouble("spawn-groups.arena.point-0.x"));
     assertEquals(64.0, reopened.config().getDouble("spawn-groups.arena.point-0.y"));
   }
 
   @Test
-  void aFileThatDoesNotExistYetOpensEmptyRatherThanFailing() {
-    DataFile absent = new DataFile(plugin, "never-written.yml");
-    assertTrue(absent.config().getKeys(false).isEmpty());
+  void aFileThatDoesNotExistYetOpensWithOnlyItsFormatRatherThanFailing() {
+    DataFile absent = new DataFile(plugin, "never-written.yml", SpawnManager.FORMAT);
+    assertEquals(Set.of(FileFormat.KEY), absent.config().getKeys(false));
     assertEquals("never-written.yml", absent.name());
+  }
+
+  @Test
+  void anUnversionedFileIsStampedOnTheNextSave() throws IOException {
+    File file = dataFolder.resolve("kills.yml").toFile();
+    try (FileWriter writer = new FileWriter(file)) {
+      writer.write("kills: {}\n");
+    }
+
+    new DataFile(plugin, "kills.yml", MobTracker.FORMAT).save();
+
+    assertEquals(1, YamlConfiguration.loadConfiguration(file).getInt(FileFormat.KEY));
+  }
+
+  @Test
+  void aNewFileStartsAtTheCurrentFormat() {
+    spawns.save();
+
+    assertEquals(
+        1,
+        YamlConfiguration.loadConfiguration(dataFolder.resolve("spawns.yml").toFile())
+            .getInt(FileFormat.KEY));
   }
 }

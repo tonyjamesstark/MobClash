@@ -1,4 +1,8 @@
 # MobClash Language Configuration
+
+# The layout version of this file. MobClash updates the file when a release changes it; do not edit.
+format-version: 1
+
 # Use {0}, {1}, etc. for placeholders
 # Use & for color codes (e.g., &a = green, &c = red, &e = yellow)
 
@@ -12,10 +16,13 @@ no-location: "&cThis command must be run by a player or from a command block."
 unknown-subcommand: "&c'{0}' is not a MobClash command. Try /mobclash help."
 reload-success: "&aReloaded config.yml and language.yml."
 reload-failed: "&cNot reloaded: {0} has a syntax error. Nothing changed; the console has the details."
+version-info: "&a{0} &7v&a{1} &7on &a{2}"
 egg-unknown-type: "&eIgnoring {0} in the wave chest: no mob matches it on this server version."
 egg-not-a-mob: "&eIgnoring {0} in the wave chest: its entity data does not spawn a mob."
 egg-has-riders: "&eIgnoring {0} in the wave chest: eggs with riders (Passengers) are not supported."
 egg-has-uuid: "&eIgnoring {0} in the wave chest: an egg with a fixed UUID can spawn only one mob."
+command-error: "&cThat command failed with an internal error; the console has the details."
+world-unloaded: "an unloaded world"
 
 # Group Messages
 group-not-exist: "&cGroup '{0}' doesn't exist!"
@@ -23,43 +30,57 @@ group-no-points: "&cGroup '{0}' has no spawn points!"
 no-groups: "&cNo spawn groups configured!"
 
 # Add Spawn Command
-addspawn-usage: "&cUsage: /addspawn <group>"
 addspawn-success: "&aAdded spawn point to group '{0}'! Total points: {1}"
 
 # Remove Spawn Command
-removespawn-usage: "&cUsage: /removespawn <group>"
 removespawn-success: "&aRemoved nearest spawn point from group '{0}'!"
+removespawn-number-success: "&aRemoved spawn point #{1} of group '{0}' at {2} ({3}, {4}, {5}). The points after it move up one number."
+invalid-spawn-number: "&c'{1}' is not a spawn point of group '{0}'. Use a number from 1 to {2}, as /listspawns {0} shows."
+
+# Remove Group Command
+removegroup-confirm: "&eThis would remove group '{0}' with {1} spawn point(s) and {2} chest(s). The chest blocks stay. To do it, run /removegroup {0} confirm"
+removegroup-success: "&aRemoved group '{0}' with {1} spawn point(s) and {2} chest(s). The chest blocks are untouched."
 
 # List Groups Command
 listgroups-header: "&a=== Spawn Groups ==="
 listgroups-entry: "&e{0} &7({1} points)"
 
 # List Spawns Command
-listspawns-usage: "&cUsage: /listspawns <group>"
 listspawns-header: "&a=== Spawn Points for '{0}' ({1} total) ==="
 listspawns-entry: "&e#{0} &7{1} &f(&a{2}&f, &a{3}&f, &a{4}&f)"
 
 # Show Spawns Command
-showspawns-usage: "&cUsage: /showspawns <group>"
 showspawns-success: "&aShowing {1} spawn point(s) for group '{0}'!"
 
 # Set Chest Command
-setchest-usage: "&cUsage: /setchest <group> <wave>"
-setchest-success: "&aSpawn egg chest '{1}' set for group '{0}'!"
+setchest-success: "&aChest '{1}' set for group '{0}'!"
 must-look-chest: "&cYou must be looking at a chest!"
 
+# List Chests Command
+listchests-header: "&a=== Chests ({0} total) ==="
+listchests-entry: "&e{0}/{1} &7{2} (&a{3}&7, &a{4}&7, &a{5}&7) &f- &a{6} egg(s)&f, &a{7} item(s)"
+listchests-missing: "&e{0}/{1} &7{2} (&a{3}&7, &a{4}&7, &a{5}&7) &f- &cmissing! found {6} instead of a chest"
+listchests-unloaded: "&e{0}/{1} &7({2}, {3}, {4}) &f- &cits world is no longer loaded"
+no-chests: "&cNo chests have been set with /setchest!"
+
+# Remove Chest Command
+removechest-success: "&aForgot chest '{1}' of group '{0}'. The block itself is untouched."
+chest-not-set: "&cGroup '{0}' has no chest '{1}'. /listchests {0} shows its chests."
+
 # Summon Mobs Command
-summonmobs-usage: "&cUsage: /summonmobs <group> <wave> <random|all> [amount] [true|false|<gear chest>]"
 summonmobs-success: "&aSpawned {0} mob(s) in group '{1}' wave '{2}'!"
 invalid-mode: "&cMode must be 'random' or 'all'!"
 wave-not-set: "&cWave '{1}' not set for group '{0}'! Use /setchest {0} {1} first."
-chest-missing: "&cThe configured chest no longer exists!"
+chest-missing: "&cChest '{1}' of group '{0}' is gone: found {2} at {3} ({4}, {5}, {6}). Look at the chest and run /setchest {0} {1}, or run /removechest {0} {1}."
 no-spawn-eggs: "&cNo spawn eggs found in the chest!"
 invalid-equipment: "&c'{0}' is not an amount, true or false, or a chest set with /setchest {1} {0}."
 summon-too-large: "&cThat would spawn {0} mobs, over the limit of {1}. Lower the amount or raise max-mobs-per-summon."
 
+# Kill Mobs Command
+killmobs-success: "&aRemoved {0} MobClash mob(s). Mobs in unloaded chunks were not reached."
+killmobs-group-success: "&aRemoved {1} MobClash mob(s) of group '{0}'. Mobs in unloaded chunks were not reached."
+
 # Kills Command
-kills-usage: "&cUsage: /kills [top [amount] | reset | resetall] &7- plain /kills shows your own"
 kills-personal: "&aYou have killed &e{0}&a MobClash mobs!"
 kills-none: "&cNo kills recorded yet!"
 kills-top-header: "&a=== Top {0} MobClash Killers ==="
@@ -68,27 +89,15 @@ kills-reset: "&aYour kills have been reset! (was {0})"
 kills-resetall: "&aAll player kills have been reset!"
 
 # Kill Board Command
-killboard-usage: "&cUsage: /killboard [world <on|off> | alloff] &7- plain /killboard toggles your own"
 killboard-title: "&6MobClash Kills"
 killboard-on: "&aKill board on."
 killboard-off: "&aKill board off."
 killboard-world-on: "&aKill board turned on for {0} player(s) in {1}."
 killboard-world-off: "&aKill board turned off for {0} player(s) in {1}."
 killboard-alloff: "&aKill board turned off for {0} player(s)."
+killboard-unknown-world: "&cNo loaded world named '{0}'."
 
 # Sent to the whole server when a player kills a mob listed in announce-kills.
 # {0} is the player, {1} the mob's name (its custom name, if it has one).
 kill-announcement: "&6&l{0} &ehas slain the &c&l{1}&e!"
 
-# /mobclash help, one line per command, shown only if the player may run it
-help-header: "&6MobClash commands you can use:"
-help-addspawn: "&e/mobclash addspawn <group> &7- add your position to a group"
-help-removespawn: "&e/mobclash removespawn <group> &7- remove the group's point nearest you"
-help-listgroups: "&e/mobclash listgroups &7- list groups and their point counts"
-help-listspawns: "&e/mobclash listspawns <group> &7- list a group's point coordinates"
-help-showspawns: "&e/mobclash showspawns <group> &7- flash a marker at each point"
-help-setchest: "&e/mobclash setchest <group> <wave> &7- use the chest you look at for a wave or gear"
-help-summonmobs: "&e/mobclash summonmobs <group> <wave> <random|all> [amount] [true|false|<gear chest>] &7- summon a wave"
-help-kills: "&e/mobclash kills [top [amount]|reset|resetall] &7- your kills, the leaderboard, or a reset"
-help-killboard: "&e/mobclash killboard [world <on|off>|alloff] &7- the kill leaderboard in your sidebar"
-help-reload: "&e/mobclash reload &7- re-read config.yml and language.yml"

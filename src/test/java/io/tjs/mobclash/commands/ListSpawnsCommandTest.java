@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -78,9 +79,25 @@ class ListSpawnsCommandTest {
   }
 
   @Test
+  void aPointWhoseWorldWasUnloadedIsListedAsSuch() {
+    Location unloaded = mock(Location.class);
+    when(unloaded.getWorld()).thenThrow(new IllegalArgumentException("World unloaded"));
+    when(unloaded.getX()).thenReturn(5.0);
+    when(unloaded.getY()).thenReturn(70.0);
+    when(unloaded.getZ()).thenReturn(5.0);
+    when(spawnManager.hasGroup("test-group")).thenReturn(true);
+    when(spawnManager.getSpawnPoints("test-group")).thenReturn(List.of(unloaded));
+
+    assertTrue(run("test-group"));
+
+    verify(sender).sendMessage("listspawns-entry[1, world-unloaded[], 5, 70, 5]");
+  }
+
+  @Test
   void noArgumentsPrintsTheUsage() {
+    listSpawnsCommand.setUsage("/<command> <group> - list points");
     assertTrue(run());
-    verify(sender).sendMessage("listspawns-usage[]");
+    verify(sender).sendMessage("§e/listspawns <group> §7- list points");
   }
 
   @Test

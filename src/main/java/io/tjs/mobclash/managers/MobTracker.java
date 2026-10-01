@@ -1,10 +1,13 @@
 package io.tjs.mobclash.managers;
 
 import io.tjs.mobclash.DataFile;
+import io.tjs.mobclash.FileFormat;
 import io.tjs.mobclash.MobClashPlugin;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import org.bukkit.NamespacedKey;
+import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
@@ -12,6 +15,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataType;
 
 public class MobTracker {
+
+  /** kills.yml's migration steps, see {@link FileFormat#upgrade}. */
+  public static final List<Consumer<ConfigurationSection>> FORMAT = List.of(FileFormat.STAMP);
 
   private final MobClashPlugin plugin;
   private final DataFile storage;
@@ -51,6 +57,28 @@ public class MobTracker {
       return null;
     }
     return entity.getPersistentDataContainer().get(mobclashKey, PersistentDataType.STRING);
+  }
+
+  /**
+   * Remove every MobClash mob in a loaded chunk, or only those of {@code group} when it is not
+   * null, and return how many went. It calls {@link Entity#remove()} rather than dealing damage, so
+   * no death event fires to drop loot and XP or credit the kill to whoever hit the mob last.
+   */
+  public int removeMobs(String group) {
+    int removed = 0;
+    for (World world : plugin.getServer().getWorlds()) {
+      for (LivingEntity entity : world.getLivingEntities()) {
+        String tag = getMobSpawnInfo(entity);
+        if (tag != null && (group == null || tag.startsWith(group + ":"))) {
+          entity.remove();
+          removed++;
+        }
+      }
+    }
+    plugin.log(
+        Level.INFO,
+        "Removed " + removed + " MobClash mob(s)" + (group == null ? "" : " of group " + group));
+    return removed;
   }
 
   /** Record a kill for a player */

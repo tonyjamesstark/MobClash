@@ -3,7 +3,11 @@ package io.tjs.mobclash.commands;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -14,6 +18,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,10 +39,10 @@ class MobClashCommandTest {
 
   private final List<String[]> killsRan = new ArrayList<>();
   private MobClashCommand mobClashCommand;
+  private final Map<String, BaseCommand> subcommands = new LinkedHashMap<>();
 
   @BeforeEach
   void setUp() {
-    Map<String, BaseCommand> subcommands = new LinkedHashMap<>();
     subcommands.put("kills", recording("mobclash.kills", killsRan));
     subcommands.put("reload", recording("mobclash.reload", new ArrayList<>()));
     mobClashCommand = new MobClashCommand(langManager, subcommands);
@@ -60,8 +66,8 @@ class MobClashCommandTest {
   @Test
   void helpListsOnlyTheCommandsTheSenderMayRun() {
     mayRunKillsButNotReload();
-    when(langManager.getMessage("help-header")).thenReturn("header");
-    when(langManager.getMessage("help-kills")).thenReturn("kills line");
+    subcommands.get("kills").setUsage("/<command> - your kills\n/<command> top - the top");
+    subcommands.get("reload").setUsage("/<command> - reload");
 
     for (String[] args : new String[][] {{}, {"help"}, {"HELP"}}) {
       assertTrue(mobClashCommand.onCommand(sender, command, "mobclash", args));
@@ -69,10 +75,11 @@ class MobClashCommandTest {
 
     InOrder order = inOrder(sender);
     for (int i = 0; i < 3; i++) {
-      order.verify(sender).sendMessage("header");
-      order.verify(sender).sendMessage("kills line");
+      order.verify(sender).sendMessage("§6MobClash commands you can use:");
+      order.verify(sender).sendMessage("§e/mobclash kills §7- your kills");
+      order.verify(sender).sendMessage("§e/mobclash kills top §7- the top");
     }
-    verify(langManager, never()).getMessage("help-reload");
+    verify(sender, never()).sendMessage("§e/mobclash reload §7- reload");
   }
 
   @Test
@@ -106,6 +113,26 @@ class MobClashCommandTest {
 
     verify(sender).sendMessage("no kils");
     assertTrue(killsRan.isEmpty());
+  }
+
+  @Test
+  void anExceptionFromExecuteIsCaughtLoggedAtSevereAndAnsweredWithCommandError() {
+    Logger logger = mock(Logger.class);
+    when(sender.hasPermission("mobclash.test")).thenReturn(true);
+    when(plugin.getLogger()).thenReturn(logger);
+    when(langManager.getMessage("command-error")).thenReturn("internal error");
+    BaseCommand throwing =
+        new BaseCommand(plugin, null, langManager, "mobclash.test", false) {
+          @Override
+          protected boolean execute(CommandSender sender, String[] args) {
+            throw new RuntimeException("boom");
+          }
+        };
+
+    assertTrue(throwing.onCommand(sender, command, "test", new String[0]));
+
+    verify(sender).sendMessage("internal error");
+    verify(logger).log(eq(Level.SEVERE), anyString(), any(RuntimeException.class));
   }
 
   @Test

@@ -17,6 +17,24 @@ Then chain command blocks with delays between them:
 /summonmobs arena boss random 1
 ```
 
+## Setting a wave's mix
+
+The share of each mob is its share of the eggs in the chest. Only the count matters, not how the
+eggs are laid out:
+
+```
+/setchest arena mixed           # chest: 3 zombie eggs in one slot, 1 skeleton egg
+/summonmobs arena mixed random 100
+```
+
+That gives about 75 zombies and 25 skeletons. Measured on a test server: 80 and 20. Put the same
+3 zombie eggs in three separate slots and nothing changes. With 3 zombie and 3 skeleton eggs,
+one stack against three single eggs, 100 summons gave 51 zombies and 49 skeletons.
+
+Each mob is drawn on its own and the eggs stay in the chest, so the chest sets the odds, not the
+number of mobs. One wither egg is enough for `/summonmobs arena boss random 3`, and a chest of
+64 zombie eggs still gives 1 mob for `/summonmobs arena wave1 random`.
+
 ## Boss with adds
 
 ```

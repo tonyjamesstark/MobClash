@@ -8,27 +8,43 @@ description: Arena mob waves from chests of spawn eggs, with random gear and kil
 commands:
   addspawn:
     description: Add a spawn point to a group, at your position
-    usage: /<command> <group>
+    usage: /<command> <group> - add your position to a group
 
   removespawn:
-    description: Remove the spawn point nearest you from a group
-    usage: /<command> <group>
+    description: Remove a spawn point from a group, the one nearest you or one by number
+    usage: |-
+      /<command> <group> - remove the group's point nearest you
+      /<command> <group> <number> - remove the point /listspawns shows as #number
+
+  removegroup:
+    description: Forget every spawn point and chest of a group, after a confirmation
+    usage: |-
+      /<command> <group> - show what removing the group would forget
+      /<command> <group> confirm - forget its spawn points and chests; chest blocks stay
 
   listgroups:
     description: List every spawn group and how many points it has
-    usage: /<command>
+    usage: /<command> - list groups and their point counts
 
   listspawns:
     description: List the coordinates of every spawn point in a group
-    usage: /<command> <group>
+    usage: /<command> <group> - list a group's point coordinates
 
   showspawns:
     description: Flash a particle marker at each of a group's spawn points
-    usage: /<command> <group>
+    usage: /<command> <group> - flash a marker at each point
 
   setchest:
     description: Use the chest you are looking at as a wave's spawn eggs or as a gear chest
-    usage: /<command> <group> <wave>
+    usage: /<command> <group> <wave> - use the chest you look at for a wave or as a gear chest
+
+  listchests:
+    description: List every chest set with /setchest, whether it is still there, and its egg count
+    usage: /<command> [group] - list set chests, whether they are still there, and their eggs
+
+  removechest:
+    description: Forget a chest set with /setchest; the block itself is untouched
+    usage: /<command> <group> <chest> - forget a group's chest, leaving the block
 
   summonmobs:
     description: Summon a wave's mobs scattered over random spawn points or at all of them
@@ -37,6 +53,12 @@ commands:
       /<command> <group> <wave> all [amount] [equipment] - at every spawn point
       amount is 1-100 per point, default 1, and the total is capped by max-mobs-per-summon
       equipment is true (config.yml lists), false (default) or a chest set with /setchest
+
+  killmobs:
+    description: Remove the loaded MobClash mobs, all or one group's, with no drops or kill credit
+    usage: |-
+      /<command> - remove every loaded MobClash mob, without drops, XP or kill credit
+      /<command> <group> - remove only that group's loaded mobs
 
   kills:
     description: Show your MobClash kills, the leaderboard, or reset them
@@ -50,15 +72,18 @@ commands:
     description: Show the kill leaderboard in the sidebar, for yourself or a whole world
     usage: |-
       /<command> - toggle it for yourself
-      /<command> world <on|off> - for everyone in your world
+      /<command> <on|off> - set it for yourself
+      /<command> world <on|off> [world] - for everyone in a world: yours, or the one named
+      /<command> <world> <on|off> - shorthand for the world form
       /<command> alloff - off for everyone in every world
 
   mobclash:
-    description: Every MobClash command under one name, plus help and reload
+    description: Every MobClash command under one name, plus help, reload and version
     usage: |-
       /<command> help - the MobClash commands you can use
       /<command> <command> [arguments] - any MobClash command, for example /<command> kills top
       /<command> reload - re-read config.yml and language.yml
+      /<command> version - the plugin and server version
 
 permissions:
   mobclash.*:
@@ -67,16 +92,21 @@ permissions:
     children:
       mobclash.addspawn: true
       mobclash.removespawn: true
+      mobclash.removegroup: true
       mobclash.listgroups: true
       mobclash.listspawns: true
       mobclash.showspawns: true
       mobclash.setchest: true
+      mobclash.listchests: true
+      mobclash.removechest: true
       mobclash.summon: true
+      mobclash.killmobs: true
       mobclash.kills: true
       mobclash.kills.resetall: true
       mobclash.killboard: true
       mobclash.killboard.admin: true
       mobclash.reload: true
+      mobclash.version: true
 
   mobclash.addspawn:
     description: Allows adding spawn points
@@ -84,6 +114,10 @@ permissions:
 
   mobclash.removespawn:
     description: Allows removing spawn points
+    default: op
+
+  mobclash.removegroup:
+    description: Allows removing a whole group, its spawn points and its chests
     default: op
 
   mobclash.listgroups:
@@ -102,8 +136,20 @@ permissions:
     description: Allows setting wave and gear chests
     default: op
 
+  mobclash.listchests:
+    description: Allows listing the chests set with /setchest and their state
+    default: op
+
+  mobclash.removechest:
+    description: Allows forgetting a chest set with /setchest
+    default: op
+
   mobclash.summon:
     description: Allows summoning mobs
+    default: op
+
+  mobclash.killmobs:
+    description: Allows removing the summoned MobClash mobs
     default: op
 
   mobclash.kills:
@@ -125,3 +171,7 @@ permissions:
   mobclash.reload:
     description: Allows reloading config.yml and language.yml
     default: op
+
+  mobclash.version:
+    description: Allows checking the plugin and server version
+    default: true

@@ -1,5 +1,57 @@
 # Changelog
 
+## v2.2.0
+
+- The kill board ranks the players in your world, including those with no kills yet, and shows
+  the top 10 plus your own line. Before, it ranked every player who had ever killed a MobClash
+  mob, wherever they were, so in a test where only one player had kills it showed just them.
+- `/killboard` takes a world name: `/killboard world <on|off> <world>` or `/killboard <world>
+  <on|off>`, case-insensitive, and also `minecraft:monstermash`. Before, `world` was a literal
+  keyword for your own world and nothing else matched. `/killboard on` and `off` set your own,
+  and the command tab-completes.
+- `/killboard world on` switches the board on for the world: players who arrive later get it,
+  and players who leave lose it unless they turned it on themselves. `alloff` clears this too.
+- A command block's MobClash replies are also logged to the console, with the block's
+  position. Before, a summon refused from a command block left no trace in the server log. An
+  error inside any MobClash command is logged with its stack trace and reported to the sender.
+- New `/listchests [group]` (also `/mobclash listchests`, permission `mobclash.listchests`,
+  default op) lists every chest set with `/setchest`: world, position, and whether a chest is
+  still there with how many spawn eggs it holds.
+- New `/mobclash version` shows the plugin and server version. Permission `mobclash.version`,
+  default everyone.
+- Command usage and help text moved from `language.yml` to `plugin.yml`, so they cannot go
+  stale on a server whose `language.yml` an older release wrote. A wrong command prints its
+  usage lines, coloured, and `/mobclash help` lists each command with its description.
+- `config.yml`, `language.yml`, `spawns.yml` and `kills.yml` carry a `format-version`, so a
+  release that changes a file's layout updates the server's copy. The first start on 2.2.0
+  stamps all four as format 1 and removes the old usage and help lines from `language.yml`. A
+  file from a newer release is left alone with a warning. See docs/configuration.md.
+- A summon whose wave chest or gear chest is gone names the chest, its group, the world and
+  coordinates, and the block found there. It also gives the `/setchest` or `/removechest`
+  command that fixes it. Before, it said only "The configured chest no longer exists!", for
+  either chest. The first start on 2.2.0 removes that old line from `language.yml`, so the new
+  text applies.
+- `/setchest` replies "Chest '...' set", not "Spawn egg chest", since it also sets gear chests.
+  The first start on 2.2.0 removes the old line from `language.yml`, as for `chest-missing`.
+- New `/removechest <group> <chest>` forgets a chest set with `/setchest`. The block is left in
+  the world. Permission `mobclash.removechest`, default op.
+- `/removespawn <group> <number>` removes the point `/listspawns` shows under that number. It
+  works from the console and command blocks too. Without a number, it removes the nearest point
+  as before.
+- New `/removegroup <group> [confirm]` forgets every spawn point and chest of a group. Without
+  `confirm` it only reports what it would remove, so a typo cannot lose a whole arena.
+  Permission `mobclash.removegroup`, default op.
+- All three also run as `/mobclash removechest`, `/mobclash removespawn` and
+  `/mobclash removegroup`.
+- New `/killmobs [group]` removes every MobClash mob in a loaded chunk, or one group's. The
+  mobs vanish without dying, so there are no drops, XP or kill credit. Permission
+  `mobclash.killmobs`, default op. Also runs as `/mobclash killmobs`.
+- With `loot-to-inventory` on, a mob whose killer has logged out or died leaves its drops on
+  the ground. Before, the drops were cleared and put in that player's inventory. The kill still
+  counts.
+- `/listspawns` and `/listchests` list a point or chest whose world has been unloaded since the
+  server started, and say so. Before, the command failed with an error.
+
 ## v2.1.0
 
 - `/summonmobs` takes an optional last argument for random equipment: `true` for the lists in

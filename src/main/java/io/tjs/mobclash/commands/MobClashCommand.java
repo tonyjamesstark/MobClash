@@ -27,11 +27,11 @@ public class MobClashCommand implements TabExecutor {
   @Override
   public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
     if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
-      sender.sendMessage(langManager.getMessage("help-header"));
+      sender.sendMessage("§6MobClash commands you can use:");
       subcommands.forEach(
           (name, sub) -> {
             if (sub.canUse(sender)) {
-              sender.sendMessage(langManager.getMessage("help-" + name));
+              sub.helpLines(label + " " + name).forEach(sender::sendMessage);
             }
           });
       return true;
@@ -41,7 +41,9 @@ public class MobClashCommand implements TabExecutor {
       sender.sendMessage(langManager.getMessage("unknown-subcommand", args[0]));
       return true;
     }
-    return sub.onCommand(sender, command, args[0], Arrays.copyOfRange(args, 1, args.length));
+    // The label stands in for /<command> in the subcommand's usage, so it reads /mobclash kills.
+    return sub.onCommand(
+        sender, command, label + " " + args[0], Arrays.copyOfRange(args, 1, args.length));
   }
 
   @Override

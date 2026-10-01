@@ -18,8 +18,7 @@ public class SetChestCommand extends BaseCommand {
   @Override
   protected boolean execute(CommandSender sender, String[] args) {
     if (args.length < 2) {
-      sender.sendMessage(langManager.getMessage("setchest-usage"));
-      return true;
+      return false;
     }
 
     String groupName = args[0];

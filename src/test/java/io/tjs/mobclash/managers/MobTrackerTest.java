@@ -6,10 +6,15 @@ import static org.mockito.Mockito.*;
 import io.tjs.mobclash.DataFile;
 import io.tjs.mobclash.MobClashPlugin;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Logger;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Server;
+import org.bukkit.World;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Zombie;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -45,13 +50,14 @@ class MobTrackerTest {
     // Shared fixture, lenient because no single test uses all of it: the kill tests never touch a
     // mob's data container and the mob tests never name a player. Stubs inside a test stay strict.
     lenient().when(plugin.getDataFolder()).thenReturn(dataFolder.toFile());
+    lenient().when(plugin.getLogger()).thenReturn(Logger.getLogger("MobTrackerTest"));
 
     lenient().when(player.getUniqueId()).thenReturn(playerUuid);
     lenient().when(player.getName()).thenReturn("TestPlayer");
 
     lenient().when(zombie.getPersistentDataContainer()).thenReturn(pdc);
 
-    mobTracker = new MobTracker(plugin, new DataFile(plugin, "kills.yml"));
+    mobTracker = new MobTracker(plugin, new DataFile(plugin, "kills.yml", MobTracker.FORMAT));
   }
 
   @Test
@@ -168,5 +174,74 @@ class MobTrackerTest {
 
     assertEquals(0, mobTracker.getKills(player));
     assertEquals(0, mobTracker.getKills(player2));
+  }
+
+  /** A zombie carrying the MobClash tag {@code tag}, or untagged when it is null. */
+  private Zombie mobTagged(String tag) {
+    Zombie mob = mock(Zombie.class);
+    PersistentDataContainer data = mock(PersistentDataContainer.class);
+    when(mob.getPersistentDataContainer()).thenReturn(data);
+    when(data.has(any(NamespacedKey.class), eq(PersistentDataType.STRING))).thenReturn(tag != null);
+    if (tag != null) {
+      when(data.get(any(NamespacedKey.class), eq(PersistentDataType.STRING))).thenReturn(tag);
+    }
+    return mob;
+  }
+
+  @SafeVarargs
+  private void worldsHolding(List<LivingEntity>... worlds) {
+    Server server = mock(Server.class);
+    when(plugin.getServer()).thenReturn(server);
+    List<World> loaded =
+        Arrays.stream(worlds)
+            .map(
+                entities -> {
+                  World world = mock(World.class);
+                  when(world.getLivingEntities()).thenReturn(entities);
+                  return world;
+                })
+            .toList();
+    when(server.getWorlds()).thenReturn(loaded);
+  }
+
+  @Test
+  void removeMobsTakesOnlyTaggedMobsInEveryWorld() {
+    Zombie arenaMob = mobTagged("arena:wave1");
+    Zombie otherWorldMob = mobTagged("mash:wave3");
+    Zombie wildMob = mobTagged(null);
+    PersistentDataContainer playerData = mock(PersistentDataContainer.class);
+    when(player.getPersistentDataContainer()).thenReturn(playerData);
+    worldsHolding(List.of(arenaMob, wildMob, player), List.of(otherWorldMob));
+
+    assertEquals(2, mobTracker.removeMobs(null));
+
+    verify(arenaMob).remove();
+    verify(otherWorldMob).remove();
+    verify(wildMob, never()).remove();
+    verify(player, never()).remove();
+  }
+
+  @Test
+  void removeMobsWithAGroupTakesOnlyThatGroupNotOneWhoseNameStartsTheSame() {
+    Zombie wave1 = mobTagged("a:wave1");
+    Zombie wave2 = mobTagged("a:wave2");
+    Zombie longerName = mobTagged("ab:wave1");
+    worldsHolding(List.of(wave1, longerName, wave2));
+
+    assertEquals(2, mobTracker.removeMobs("a"));
+
+    verify(wave1).remove();
+    verify(wave2).remove();
+    verify(longerName, never()).remove();
+  }
+
+  @Test
+  void removeMobsWithAnUnknownGroupRemovesNothing() {
+    Zombie arenaMob = mobTagged("arena:wave1");
+    worldsHolding(List.of(arenaMob));
+
+    assertEquals(0, mobTracker.removeMobs("ghost"));
+
+    verify(arenaMob, never()).remove();
   }
 }

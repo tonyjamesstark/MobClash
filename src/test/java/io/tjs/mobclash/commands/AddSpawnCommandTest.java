@@ -89,11 +89,12 @@ class AddSpawnCommandTest {
   @Test
   void testAddSpawnMissingArguments() {
     when(player.hasPermission("mobclash.addspawn")).thenReturn(true);
+    addSpawnCommand.setUsage("/<command> <group> - add your position");
 
     boolean result = addSpawnCommand.onCommand(player, command, "addspawn", new String[] {});
 
     assertTrue(result);
-    verify(player).sendMessage("addspawn-usage");
+    verify(player).sendMessage("§e/addspawn <group> §7- add your position");
     verify(spawnManager, never()).addSpawnPoint(anyString(), any());
   }
 

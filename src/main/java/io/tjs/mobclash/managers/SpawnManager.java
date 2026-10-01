@@ -1,8 +1,10 @@
 package io.tjs.mobclash.managers;
 
 import io.tjs.mobclash.DataFile;
+import io.tjs.mobclash.FileFormat;
 import io.tjs.mobclash.MobClashPlugin;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.regex.Pattern;
 import org.bukkit.Bukkit;
@@ -19,6 +21,9 @@ public class SpawnManager {
    * reload.
    */
   private static final Pattern VALID_NAME = Pattern.compile("[A-Za-z0-9_-]{1,32}");
+
+  /** spawns.yml's migration steps, see {@link FileFormat#upgrade}. */
+  public static final List<Consumer<ConfigurationSection>> FORMAT = List.of(FileFormat.STAMP);
 
   private final MobClashPlugin plugin;
   private final DataFile storage;
@@ -62,8 +67,11 @@ public class SpawnManager {
         world, section.getDouble("x"), section.getDouble("y"), section.getDouble("z"));
   }
 
-  /** The location's world name, or null if it was never set or has since been unloaded. */
-  private static String worldNameOf(Location location) {
+  /**
+   * The location's world name, or null if it was never set or has since been unloaded. Paper's
+   * {@link Location#getWorld()} throws for an unloaded world rather than returning null.
+   */
+  public static String worldNameOf(Location location) {
     try {
       World world = location.getWorld();
       return world == null ? null : world.getName();
@@ -155,7 +163,9 @@ public class SpawnManager {
                         + waveName
                         + "' for group '"
                         + groupName
-                        + "' at "
+                        + "' in "
+                        + worldNameOf(loc)
+                        + " at "
                         + String.format("(%.1f, %.1f, %.1f)", loc.getX(), loc.getY(), loc.getZ()));
               }
             }
@@ -171,7 +181,7 @@ public class SpawnManager {
             + spawnGroups.size()
             + " groups, "
             + groupChests.values().stream().mapToInt(Map::size).sum()
-            + " wave chests");
+            + " chests");
   }
 
   /**
@@ -285,13 +295,43 @@ public class SpawnManager {
             + String.format(
                 "(%.1f, %.1f, %.1f), %.1f blocks away",
                 nearest.getX(), nearest.getY(), nearest.getZ(), minDist));
+    dropIfEmptyAndSave(groupName, locations);
+    return true;
+  }
 
+  /**
+   * Remove the spawn point at {@code index} in {@link #getSpawnPoints} order, which is the order
+   * /listspawns numbers from 1. The points after it move up one place.
+   *
+   * @return the removed point, or null when the group has no point at that index
+   */
+  public Location removeSpawnPoint(String groupName, int index) {
+    List<Location> locations = spawnGroups.get(groupName);
+    if (locations == null || index < 0 || index >= locations.size()) {
+      return null;
+    }
+    Location removed = locations.remove(index);
+    plugin.log(
+        Level.INFO,
+        "Removed spawn point #"
+            + (index + 1)
+            + " from group '"
+            + groupName
+            + "' at "
+            + String.format(
+                "(%.1f, %.1f, %.1f) in %s",
+                removed.getX(), removed.getY(), removed.getZ(), worldNameOf(removed)));
+    dropIfEmptyAndSave(groupName, locations);
+    return removed;
+  }
+
+  /** The tail of every spawn point removal: a group with no points left goes too. */
+  private void dropIfEmptyAndSave(String groupName, List<Location> locations) {
     if (locations.isEmpty()) {
       spawnGroups.remove(groupName);
       plugin.log(Level.INFO, "Group '" + groupName + "' is now empty and has been removed");
     }
     saveConfigData();
-    return true;
   }
 
   public void setGroupChest(String groupName, String waveName, Location chestLocation) {
@@ -313,6 +353,48 @@ public class SpawnManager {
     saveConfigData();
   }
 
+  /**
+   * Forget a chest set with /setchest. The block in the world is not touched.
+   *
+   * @return whether the group had a chest of that name
+   */
+  public boolean removeGroupChest(String groupName, String chestName) {
+    Map<String, Location> chests = groupChests.get(groupName);
+    if (chests == null || chests.remove(chestName) == null) {
+      return false;
+    }
+    if (chests.isEmpty()) {
+      groupChests.remove(groupName);
+    }
+    plugin.log(Level.INFO, "Removed chest '" + chestName + "' from group '" + groupName + "'");
+    saveConfigData();
+    return true;
+  }
+
+  /**
+   * Forget every spawn point and chest of a group. Chest blocks in the world are not touched.
+   *
+   * @return whether the group had any spawn points or chests
+   */
+  public boolean removeGroup(String groupName) {
+    List<Location> points = spawnGroups.remove(groupName);
+    Map<String, Location> chests = groupChests.remove(groupName);
+    if (points == null && chests == null) {
+      return false;
+    }
+    plugin.log(
+        Level.INFO,
+        "Removed group '"
+            + groupName
+            + "' with "
+            + (points == null ? 0 : points.size())
+            + " spawn points and "
+            + (chests == null ? 0 : chests.size())
+            + " chests");
+    saveConfigData();
+    return true;
+  }
+
   public boolean hasGroup(String groupName) {
     return spawnGroups.containsKey(groupName);
   }
@@ -331,6 +413,14 @@ public class SpawnManager {
 
   public Map<String, Location> getGroupWaves(String groupName) {
     return Map.copyOf(groupChests.getOrDefault(groupName, Map.of()));
+  }
+
+  /**
+   * The groups that have at least one chest set with /setchest. A group can have chests but no
+   * spawn points, so it would not appear in {@link #getAllGroups()}.
+   */
+  public Set<String> getChestGroups() {
+    return Set.copyOf(groupChests.keySet());
   }
 
   public Map<String, List<Location>> getAllGroups() {

@@ -17,8 +17,7 @@ public class ListSpawnsCommand extends BaseCommand {
   @Override
   protected boolean execute(CommandSender sender, String[] args) {
     if (args.length < 1) {
-      sender.sendMessage(langManager.getMessage("listspawns-usage"));
-      return true;
+      return false;
     }
 
     String groupName = args[0];
@@ -39,11 +38,12 @@ public class ListSpawnsCommand extends BaseCommand {
 
     for (int i = 0; i < locations.size(); i++) {
       Location loc = locations.get(i);
+      String worldName = SpawnManager.worldNameOf(loc);
       sender.sendMessage(
           langManager.getMessage(
               "listspawns-entry",
               i + 1,
-              loc.getWorld().getName(),
+              worldName == null ? langManager.getMessage("world-unloaded") : worldName,
               Math.round(loc.getX()),
               Math.round(loc.getY()),
               Math.round(loc.getZ())));

@@ -111,7 +111,6 @@ public class KillsCommand extends BaseCommand {
     }
 
     // Unknown subcommand
-    sender.sendMessage(langManager.getMessage("kills-usage"));
-    return true;
+    return false;
   }
 }

@@ -70,9 +70,10 @@ public class SummonMobsCommand extends BaseCommand {
 
   @Override
   protected boolean execute(CommandSender sender, String[] args) {
-    if (args.length < 3) {
-      sender.sendMessage(langManager.getMessage("summonmobs-usage"));
-      return true;
+    // <group> <wave> <mode> [amount] [equipment]: the amount is the one that is a number.
+    boolean hasAmount = args.length > 3 && args[3].matches("-?\\d+");
+    if (args.length < 3 || args.length > (hasAmount ? 5 : 4)) {
+      return false;
     }
 
     String groupName = args[0];
@@ -80,24 +81,24 @@ public class SummonMobsCommand extends BaseCommand {
     String mode = args[2].toLowerCase();
 
     if (!mode.equals("random") && !mode.equals("all")) {
-      sender.sendMessage(langManager.getMessage("invalid-mode"));
+      reply(sender, "invalid-mode");
       return true;
     }
 
     if (!spawnManager.hasGroup(groupName)) {
-      sender.sendMessage(langManager.getMessage("group-not-exist", groupName));
+      reply(sender, "group-not-exist", groupName);
       return true;
     }
 
     Location chestLocation = spawnManager.getGroupChest(groupName, waveName);
     if (chestLocation == null) {
-      sender.sendMessage(langManager.getMessage("wave-not-set", groupName, waveName));
+      reply(sender, "wave-not-set", groupName, waveName);
       return true;
     }
 
     List<Location> locations = spawnManager.getSpawnPoints(groupName);
     if (locations.isEmpty()) {
-      sender.sendMessage(langManager.getMessage("group-no-points", groupName));
+      reply(sender, "group-no-points", groupName);
       return true;
     }
 
@@ -112,13 +113,13 @@ public class SummonMobsCommand extends BaseCommand {
     int plannedTotal = mode.equals("all") ? amount * locations.size() : amount;
     int maxPerSummon = plugin.getConfig().getInt("max-mobs-per-summon", 500);
     if (maxPerSummon > 0 && plannedTotal > maxPerSummon) {
-      sender.sendMessage(langManager.getMessage("summon-too-large", plannedTotal, maxPerSummon));
+      reply(sender, "summon-too-large", plannedTotal, maxPerSummon);
       return true;
     }
 
     Block block = chestLocation.getBlock();
     if (block.getType() != Material.CHEST) {
-      sender.sendMessage(langManager.getMessage("chest-missing"));
+      replyChestMissing(sender, groupName, waveName, chestLocation, block);
       return true;
     }
 
@@ -126,7 +127,7 @@ public class SummonMobsCommand extends BaseCommand {
     List<PoolEntry> spawnEggs = getSpawnEggsFromChest(sender, chest.getInventory());
 
     if (spawnEggs.isEmpty()) {
-      sender.sendMessage(langManager.getMessage("no-spawn-eggs"));
+      reply(sender, "no-spawn-eggs");
       return true;
     }
 
@@ -159,7 +160,7 @@ public class SummonMobsCommand extends BaseCommand {
             + waveName
             + "'");
 
-    sender.sendMessage(langManager.getMessage("summonmobs-success", spawned, groupName, waveName));
+    reply(sender, "summonmobs-success", spawned, groupName, waveName);
     return true;
   }
 
@@ -180,19 +181,15 @@ public class SummonMobsCommand extends BaseCommand {
       try {
         amount = Integer.parseInt(args[next++]);
       } catch (NumberFormatException e) {
-        sender.sendMessage(langManager.getMessage("invalid-number"));
+        reply(sender, "invalid-number");
         return null;
       }
       if (amount < 1 || amount > 100) {
-        sender.sendMessage(langManager.getMessage("invalid-amount"));
+        reply(sender, "invalid-amount");
         return null;
       }
     }
-    String equipment = args.length > next ? args[next++] : "false";
-    if (args.length > next) {
-      sender.sendMessage(langManager.getMessage("summonmobs-usage"));
-      return null;
-    }
+    String equipment = args.length > next ? args[next] : "false";
 
     if (equipment.equalsIgnoreCase("false")) {
       return new Options(amount, null, null);
@@ -205,18 +202,36 @@ public class SummonMobsCommand extends BaseCommand {
             ? spawnManager.getGroupChest(groupName, equipment)
             : null;
     if (gearChest == null) {
-      sender.sendMessage(langManager.getMessage("invalid-equipment", equipment, groupName));
+      reply(sender, "invalid-equipment", equipment, groupName);
       return null;
     }
     Block block = gearChest.getBlock();
     if (block.getType() != Material.CHEST) {
-      sender.sendMessage(langManager.getMessage("chest-missing"));
+      replyChestMissing(sender, groupName, equipment, gearChest, block);
       return null;
     }
     return new Options(
         amount,
         RandomEquipment.fromChest(((Chest) block.getState()).getInventory()),
         "chest '" + equipment + "'");
+  }
+
+  /**
+   * Name the chest that is gone, where it was set and what stands there now, so the operator can
+   * find it without opening spawns.yml.
+   */
+  private void replyChestMissing(
+      CommandSender sender, String groupName, String chestName, Location location, Block block) {
+    reply(
+        sender,
+        "chest-missing",
+        groupName,
+        chestName,
+        block.getType(),
+        location.getWorld().getName(),
+        location.getBlockX(),
+        location.getBlockY(),
+        location.getBlockZ());
   }
 
   private RandomEquipment.Pools<ItemStack> configGear() {
@@ -304,7 +319,8 @@ public class SummonMobsCommand extends BaseCommand {
 
   /**
    * Leave an egg out of the pool, telling the console and whoever ran the summon -- a player, or a
-   * command block's last output -- why. A silently shorter pool leaves nothing to debug from.
+   * command block's last output -- why. A silently shorter pool leaves nothing to debug from. Sent
+   * directly rather than through reply(), which would log the same egg a second time.
    */
   private void skipEgg(CommandSender sender, ItemStack item, String key, String reason) {
     plugin.log(Level.WARNING, "Ignoring " + item.getType() + " in the wave chest: " + reason);

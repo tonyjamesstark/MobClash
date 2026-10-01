@@ -18,8 +18,7 @@ public class ShowSpawnsCommand extends BaseCommand {
   @Override
   protected boolean execute(CommandSender sender, String[] args) {
     if (args.length < 1) {
-      sender.sendMessage(langManager.getMessage("showspawns-usage"));
-      return true;
+      return false;
     }
 
     String groupName = args[0];

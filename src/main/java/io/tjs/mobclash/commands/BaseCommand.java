@@ -3,7 +3,10 @@ package io.tjs.mobclash.commands;
 import io.tjs.mobclash.MobClashPlugin;
 import io.tjs.mobclash.managers.LanguageManager;
 import io.tjs.mobclash.managers.SpawnManager;
+import java.util.Arrays;
+import java.util.List;
 import java.util.logging.Level;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.Command;
@@ -19,6 +22,9 @@ public abstract class BaseCommand implements CommandExecutor {
   protected final LanguageManager langManager;
   protected final String permission;
   protected final boolean requiresPlayer;
+  private String usage = "";
+
+  private static final String COMMAND = "/<command>";
 
   public BaseCommand(
       MobClashPlugin plugin,
@@ -66,7 +72,21 @@ public abstract class BaseCommand implements CommandExecutor {
       return true;
     }
 
-    return execute(sender, args);
+    try {
+      if (!execute(sender, args)) {
+        sendUsage(sender, label);
+      }
+      return true;
+    } catch (RuntimeException e) {
+      plugin
+          .getLogger()
+          .log(
+              Level.SEVERE,
+              "Command '" + command.getName() + "' threw for args " + Arrays.toString(args),
+              e);
+      reply(sender, "command-error");
+      return true;
+    }
   }
 
   /** Whether the sender may run this command, with the console and command block bypass. */
@@ -110,6 +130,36 @@ public abstract class BaseCommand implements CommandExecutor {
   }
 
   /**
+   * Send the sender a language.yml message and, when the sender is a command block, also log it
+   * through the console naming the block's world and position. A command block's LastOutput is
+   * otherwise the only place the reason for an early exit or a skipped egg ever appears, invisible
+   * to the operator debugging a production chest from the server log.
+   */
+  protected void reply(CommandSender sender, String key, Object... args) {
+    send(sender, langManager.getMessage(key, args));
+  }
+
+  /** Send a message, also logging it when the sender is a command block. See {@link #reply}. */
+  private void send(CommandSender sender, String message) {
+    sender.sendMessage(message);
+    if (sender instanceof BlockCommandSender) {
+      Location loc = senderLocation(sender);
+      plugin.log(
+          Level.INFO,
+          "Command block at "
+              + loc.getWorld().getName()
+              + " "
+              + loc.getBlockX()
+              + " "
+              + loc.getBlockY()
+              + " "
+              + loc.getBlockZ()
+              + ": "
+              + ChatColor.stripColor(message));
+    }
+  }
+
+  /**
    * Reject group and wave names that cannot round-trip through the config, messaging the sender.
    * Returns true when the name is usable.
    */
@@ -125,6 +175,49 @@ public abstract class BaseCommand implements CommandExecutor {
     return (Player) sender;
   }
 
-  /** Execute the command logic */
+  /**
+   * Set this command's usage, the block from its plugin.yml entry. plugin.yml is the one place
+   * usage and help text live: Bukkit's /help reads it too, and unlike language.yml the server's
+   * copy is replaced on every upgrade, so a new argument cannot leave a stale usage line behind.
+   */
+  public void setUsage(String usage) {
+    this.usage = usage == null ? "" : usage;
+  }
+
+  /**
+   * The usage lines that show a form of the command, for {@code /mobclash help}. {@code typed} is
+   * what stands in for {@code /<command>}, without the slash.
+   */
+  public List<String> helpLines(String typed) {
+    return usage
+        .lines()
+        .filter(line -> line.startsWith(COMMAND))
+        .map(line -> render(line, typed))
+        .toList();
+  }
+
+  private void sendUsage(CommandSender sender, String typed) {
+    usage.lines().map(line -> render(line, typed)).forEach(line -> send(sender, line));
+  }
+
+  /**
+   * One usage line in chat colours: the command form yellow and its explanation after " - " grey. A
+   * line that is not a command form is all grey.
+   */
+  static String render(String line, String typed) {
+    String text = line.replace(COMMAND, "/" + typed);
+    if (!line.startsWith(COMMAND)) {
+      return "§7" + text;
+    }
+    int dash = text.indexOf(" - ");
+    return dash < 0
+        ? "§e" + text
+        : "§e" + text.substring(0, dash) + " §7" + text.substring(dash + 1);
+  }
+
+  /**
+   * Execute the command logic. Return false for arguments that do not fit, and the usage from
+   * plugin.yml is shown; return true once the sender has been told what happened.
+   */
   protected abstract boolean execute(CommandSender sender, String[] args);
 }

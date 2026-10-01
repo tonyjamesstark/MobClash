@@ -7,6 +7,8 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.logging.Logger;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +30,7 @@ class LanguageManagerTest {
   void setUp() throws IOException {
     File dataFolder = tempDir.toFile();
     when(plugin.getDataFolder()).thenReturn(dataFolder);
+    when(plugin.getLogger()).thenReturn(Logger.getLogger("LanguageManagerTest"));
     when(plugin.getResource("language.yml"))
         .thenAnswer(invocation -> getClass().getResourceAsStream("/language.yml"));
 
@@ -72,6 +75,48 @@ class LanguageManagerTest {
   void aKeyMissingFromAnOlderCopyFallsBackToTheBundledOne() {
     // An upgraded server keeps the language.yml its first version wrote.
     assertEquals("§6MobClash Kills", languageManager.getMessage("killboard-title"));
+  }
+
+  @Test
+  void anUnversionedCopyLosesTheUsageTextThatMovedToPluginYml() throws IOException {
+    File langFile = new File(tempDir.toFile(), "language.yml");
+    try (FileWriter writer = new FileWriter(langFile)) {
+      writer.write("no-permission: \"Locally edited\"\n");
+      writer.write("killboard-usage: \"old\"\n");
+      writer.write("help-header: \"old\"\n");
+      writer.write("help-killboard: \"old\"\n");
+      writer.write("chest-missing: \"&cThe configured chest no longer exists!\"\n");
+      writer.write("setchest-success: \"&aSpawn egg chest '{1}' set for group '{0}'!\"\n");
+    }
+
+    languageManager.reload();
+
+    YamlConfiguration saved = YamlConfiguration.loadConfiguration(langFile);
+    assertEquals(1, saved.getInt("format-version"));
+    assertEquals("Locally edited", saved.getString("no-permission"));
+    assertFalse(saved.contains("killboard-usage"));
+    assertFalse(saved.contains("help-header"));
+    assertFalse(saved.contains("help-killboard"));
+    assertFalse(saved.contains("chest-missing"));
+    assertFalse(saved.contains("setchest-success"));
+    assertEquals(
+        "§aChest 'gear1' set for group 'mash'!",
+        languageManager.getMessage("setchest-success", "mash", "gear1"));
+  }
+
+  @Test
+  void anUpgradedCopyNamesTheMissingChestWithTheBundledText() throws IOException {
+    try (FileWriter writer = new FileWriter(new File(tempDir.toFile(), "language.yml"))) {
+      writer.write("chest-missing: \"&cThe configured chest no longer exists!\"\n");
+    }
+
+    languageManager.reload();
+
+    assertEquals(
+        "§cChest 'wave3' of group 'mash' is gone: found STONE at MonsterMash (6, -26, -7)."
+            + " Look at the chest and run /setchest mash wave3, or run /removechest mash wave3.",
+        languageManager.getMessage(
+            "chest-missing", "mash", "wave3", "STONE", "MonsterMash", 6, -26, -7));
   }
 
   @Test

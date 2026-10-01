@@ -11,13 +11,20 @@ import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.command.TabCompleter;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class MobClashPlugin extends JavaPlugin {
+
+  /** config.yml's migration steps, see {@link FileFormat#upgrade}. */
+  static final List<Consumer<ConfigurationSection>> CONFIG_FORMAT = List.of(FileFormat.STAMP);
 
   private SpawnManager spawnManager;
   private LanguageManager languageManager;
@@ -28,6 +35,7 @@ public class MobClashPlugin extends JavaPlugin {
   @Override
   public void onEnable() {
     saveDefaultConfig();
+    upgradeConfig();
     loadLoggingLevel();
 
     log(Level.INFO, "Initializing MobClash plugin...");
@@ -35,8 +43,8 @@ public class MobClashPlugin extends JavaPlugin {
     languageManager = new LanguageManager(this);
     log(Level.INFO, "Language manager loaded");
 
-    DataFile spawns = new DataFile(this, "spawns.yml");
-    DataFile kills = new DataFile(this, "kills.yml");
+    DataFile spawns = new DataFile(this, "spawns.yml", SpawnManager.FORMAT);
+    DataFile kills = new DataFile(this, "kills.yml", MobTracker.FORMAT);
     migrateRuntimeStateOutOfConfig(spawns, kills);
 
     spawnManager = new SpawnManager(this, spawns);
@@ -121,6 +129,7 @@ public class MobClashPlugin extends JavaPlugin {
       requireParses(new File(getDataFolder(), name));
     }
     reloadConfig();
+    upgradeConfig();
     loadLoggingLevel();
     languageManager.reload();
   }
@@ -140,6 +149,13 @@ public class MobClashPlugin extends JavaPlugin {
     }
   }
 
+  /** Bring the server's config.yml to the current format, writing it back if that changed it. */
+  private void upgradeConfig() {
+    if (FileFormat.upgrade(getConfig(), "config.yml", CONFIG_FORMAT, getLogger())) {
+      saveConfig();
+    }
+  }
+
   private void loadLoggingLevel() {
     String levelStr = getConfig().getString("logging-level", "INFO").toUpperCase();
     try {
@@ -155,11 +171,15 @@ public class MobClashPlugin extends JavaPlugin {
     Map<String, BaseCommand> executors = new LinkedHashMap<>();
     executors.put("addspawn", new AddSpawnCommand(this, spawnManager, languageManager));
     executors.put("removespawn", new RemoveSpawnCommand(this, spawnManager, languageManager));
+    executors.put("removegroup", new RemoveGroupCommand(this, spawnManager, languageManager));
     executors.put("listgroups", new ListGroupsCommand(this, spawnManager, languageManager));
     executors.put("listspawns", new ListSpawnsCommand(this, spawnManager, languageManager));
     executors.put("showspawns", new ShowSpawnsCommand(this, spawnManager, languageManager));
     executors.put("setchest", new SetChestCommand(this, spawnManager, languageManager));
+    executors.put("listchests", new ListChestsCommand(this, spawnManager, languageManager));
+    executors.put("removechest", new RemoveChestCommand(this, spawnManager, languageManager));
     executors.put("summonmobs", new SummonMobsCommand(this, spawnManager, languageManager));
+    executors.put("killmobs", new KillMobsCommand(this, spawnManager, languageManager, mobTracker));
     executors.put(
         "kills", new KillsCommand(this, spawnManager, languageManager, mobTracker, killBoard));
     executors.put(
@@ -175,17 +195,39 @@ public class MobClashPlugin extends JavaPlugin {
           // Set here rather than in plugin.yml so it cannot drift from the node the executor
           // checks. Bukkit then hides the command from anyone who lacks it.
           command.setPermission(executor.getPermission());
+          executor.setUsage(command.getUsage());
+          if (executor instanceof TabCompleter completer) {
+            command.setTabCompleter(completer);
+          }
         });
 
     // /mobclash has no permission of its own: help lists only what the sender may run.
     Map<String, BaseCommand> subcommands = new LinkedHashMap<>(executors);
-    subcommands.put("reload", new ReloadCommand(this, spawnManager, languageManager));
+    Map<String, BaseCommand> ownOnly = new LinkedHashMap<>();
+    ownOnly.put("reload", new ReloadCommand(this, spawnManager, languageManager));
+    ownOnly.put("version", new VersionCommand(this, spawnManager, languageManager));
+    subcommands.putAll(ownOnly);
     MobClashCommand root = new MobClashCommand(languageManager, subcommands);
     PluginCommand command = declaredCommand("mobclash");
     if (command != null) {
       command.setExecutor(root);
       command.setTabCompleter(root);
+      ownOnly.forEach((name, sub) -> sub.setUsage(subcommandUsage(command.getUsage(), name)));
     }
+  }
+
+  /**
+   * The lines of /mobclash's usage for one of the subcommands that exist only under it, such as
+   * {@code /<command> reload - ...}, rewritten as that subcommand's own usage, {@code /<command> -
+   * ...}.
+   */
+  static String subcommandUsage(String rootUsage, String name) {
+    String prefix = "/<command> " + name;
+    return rootUsage
+        .lines()
+        .filter(line -> line.equals(prefix) || line.startsWith(prefix + " "))
+        .map(line -> "/<command>" + line.substring(prefix.length()))
+        .collect(Collectors.joining("\n"));
   }
 
   /**
